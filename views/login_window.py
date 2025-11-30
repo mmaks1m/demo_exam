@@ -12,10 +12,28 @@ class LoginWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Вход в систему - Магазин обуви")
-        self.setFixedSize(400, 500)
+        self.setFixedSize(1000, 800)
         self.setup_ui()
         
     def setup_ui(self):
+        self.setStyleSheet("""
+            LoginWindow {
+                background-color: #FFFFFF;
+                font-family: "Times New Roman";
+            }
+            QLabel {
+                font-family: "Times New Roman";
+                color: #000000;
+            }
+            QLineEdit {
+                font-family: "Times New Roman";
+                background-color: white;
+                color: #000000;
+            }
+            QPushButton {
+                font-family: "Times New Roman";
+            }
+        """)
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
         layout.setSpacing(20)

@@ -1,7 +1,7 @@
 import sys
 import os
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication, QToolBar
+from PySide6.QtGui import QIcon, QAction
 
 from views.login_window import LoginWindow
 from views.main_window import MainWindow
@@ -16,6 +16,29 @@ class ShoeShopApp(QApplication):
         
     def set_current_user(self, user):
         self.current_user = user
+    
+    def setup_toolbar(self):
+        toolbar = QToolBar()
+        toolbar.setMovable(False)
+        self.addToolBar(toolbar)
+        
+        # Кнопка "Товары" - для всех
+        products_action = QAction("Товары", self)
+        products_action.triggered.connect(self.show_products)
+        toolbar.addAction(products_action)
+        
+        # Кнопка "Заказы" - только для менеджера и администратора
+        if self.user and self.user.role in ['менеджер', 'администратор']:
+            orders_action = QAction("Заказы", self)
+            orders_action.triggered.connect(self.show_orders)
+            toolbar.addAction(orders_action)
+        
+        toolbar.addSeparator()
+        
+        # Кнопка выхода
+        logout_action = QAction("Выйти", self)
+        logout_action.triggered.connect(self.logout)
+        toolbar.addAction(logout_action)
 
 def main():
     app = ShoeShopApp(sys.argv)

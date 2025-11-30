@@ -1,16 +1,32 @@
+/* styles/style.css */
+* {
+    font-family: "Times New Roman", serif;
+}
+
 QMainWindow {
-    background-color: #fc0000;
+    background-color: #FFFFFF;
 }
 
 QWidget {
-    font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 9pt;
-    color: black;
+    background-color: #FFFFFF;
+    font-family: "Times New Roman";
+}
+
+QToolBar {
+    background-color: #7FFF00;  /* Дополнительный фон */
+    border: none;
+    spacing: 10px;
+    padding: 5px;
+}
+
+QStatusBar {
+    background-color: #7FFF00;  /* Дополнительный фон */
+    color: #000000;
 }
 
 QPushButton {
-    background-color: #2E8B57;
-    color: white;
+    background-color: #00FA9A;  /* Акцентирование внимания */
+    color: #000000;
     border: none;
     padding: 8px 15px;
     border-radius: 4px;
@@ -18,78 +34,25 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: #3CB371;
-}
-
-QPushButton:pressed {
-    background-color: #228B22;
-}
-
-QPushButton:disabled {
-    background-color: #cccccc;
-    color: #666666;
+    background-color: #00E58B;
 }
 
 QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     padding: 6px;
-    border: 1px solid #ccc;
+    border: 1px solid #cccccc;
     border-radius: 4px;
-    background-color: white;
-}
-
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-    border-color: #2E8B57;
-}
-
-QTableView {
-    gridline-color: #ddd;
-    background-color: white;
-    alternate-background-color: #f9f9f9;
-    selection-background-color: #2E8B57;
-}
-
-QTableView::item {
-    padding: 5px;
-    border-bottom: 1px solid #eee;
-}
-
-QHeaderView::section {
-    background-color: #2E8B57;
-    color: white;
-    padding: 8px;
-    border: none;
-    font-weight: bold;
-}
-
-QToolBar {
-    background-color: white;
-    border: none;
-    border-bottom: 1px solid #ddd;
-    spacing: 5px;
-    padding: 5px;
-}
-
-QStatusBar {
-    background-color: white;
-    color: #666;
-    border-top: 1px solid #ddd;
+    background-color: #FFFFFF;
+    color: #000000;
+    font-family: "Times New Roman";
 }
 
 QMessageBox {
-    background-color: white;
+    background-color: #FFFFFF;
+    font-family: "Times New Roman";
 }
 
-/* Специфичные стили для разных ролей */
-.discount-high {
-    background-color: #2E8B57;
-    color: white;
-}
-
-.out-of-stock {
-    background-color: lightblue;
-}
-
-.price-discounted {
-    color: red;
-    text-decoration: none;
+QLabel {
+    background-color: transparent;
+    color: #000000;
+    font-family: "Times New Roman";
 }

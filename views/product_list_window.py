@@ -1,12 +1,21 @@
 import os
+import sys
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QComboBox, QPushButton, QTableView,
-                             QHeaderView, QMessageBox, QFrame)
+                             QHeaderView, QMessageBox, QFrame, QScrollArea)
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal
 from PySide6.QtGui import QColor, QFont, QBrush
 
 from product_service import ProductService
 from views.product_edit_window import ProductEditWindow
+from views.product_card_widget import ProductCardWidget
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+from product_service import ProductService
+
 
 class ProductTableModel(QAbstractTableModel):
     def __init__(self, products=None):
@@ -61,29 +70,41 @@ class ProductTableModel(QAbstractTableModel):
         return None
 
 class ProductListWindow(QWidget):
-    product_selected = Signal(object)
-    
     def __init__(self, user):
         super().__init__()
         self.user = user
         self.products = []
-        print(f"🔄 Создание окна товаров для пользователя: {user.full_name if user else 'Гость'}")
+        
+        # Установка белого фона и шрифта
+        self.setStyleSheet("""
+            ProductListWindow {
+                background-color: #FFFFFF;
+                font-family: "Times New Roman";
+            }
+        """)
+        
         self.setup_ui()
         self.load_products()
-        print("✅ Окно товаров создано")
         
     def setup_ui(self):
         layout = QVBoxLayout()
         
-        # Панель поиска и фильтрации
-        search_panel = self.create_search_panel()
-        layout.addWidget(search_panel)
+        # Панель поиска и фильтрации - ТОЛЬКО для менеджера и администратора
+        if self.user and self.user.role in ['менеджер', 'администратор']:
+            search_panel = self.create_search_panel()
+            layout.addWidget(search_panel)
         
-        # Таблица товаров
-        self.setup_table()
-        layout.addWidget(self.table_view)
+        # Scroll area для карточек товаров
+        self.scroll_area = QScrollArea()
+        self.scroll_widget = QWidget()
+        self.scroll_layout = QVBoxLayout(self.scroll_widget)
+        self.scroll_area.setWidget(self.scroll_widget)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
-        # Панель кнопок (для администратора)
+        layout.addWidget(self.scroll_area)
+        
+        # Панель кнопок - ТОЛЬКО для администратора
         if self.user and self.user.role == 'администратор':
             button_panel = self.create_button_panel()
             layout.addWidget(button_panel)
@@ -135,22 +156,6 @@ class ProductListWindow(QWidget):
         panel.setLayout(layout)
         return panel
     
-    def setup_table(self):
-        self.table_view = QTableView()
-        # УБРАН аргумент user из ProductTableModel
-        self.table_model = ProductTableModel()
-        self.table_view.setModel(self.table_model)
-        
-        # Настройка внешнего вида таблицы
-        header = self.table_view.horizontalHeader()
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # Название растягивается
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Категория
-        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)  # Поставщик
-        
-        # Двойной клик для редактирования (для администратора)
-        if self.user and self.user.role == 'администратор':
-            self.table_view.doubleClicked.connect(self.edit_product)
-    
     def create_button_panel(self):
         panel = QFrame()
         layout = QHBoxLayout()
@@ -173,16 +178,36 @@ class ProductListWindow(QWidget):
     
     def load_products(self):
         self.products = ProductService.get_all_products()
-        self.table_model.products = self.products
-        self.table_model.layoutChanged.emit()
         
-        # Загружаем поставщиков в комбобокс
-        suppliers = ProductService.get_all_suppliers()
-        self.supplier_combo.clear()
-        self.supplier_combo.addItem("Все поставщики")
-        self.supplier_combo.addItems(suppliers)
+        # Очищаем предыдущие карточки
+        for i in reversed(range(self.scroll_layout.count())): 
+            widget = self.scroll_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+        
+        # Импортируем здесь, чтобы избежать циклического импорта
+        from views.product_card_widget import ProductCardWidget
+        
+        # Создаем карточки для каждого товара
+        for product in self.products:
+            card = ProductCardWidget(product, self.user)
+            self.scroll_layout.addWidget(card)
+        
+        # Добавляем растягивающий элемент в конец
+        self.scroll_layout.addStretch()
+        
+        # Загружаем поставщиков в комбобокс (для менеджера и администратора)
+        if self.user and self.user.role in ['менеджер', 'администратор']:
+            suppliers = ProductService.get_all_suppliers()
+            self.supplier_combo.clear()
+            self.supplier_combo.addItem("Все поставщики")
+            self.supplier_combo.addItems(suppliers)
     
     def apply_filters(self):
+        # Этот метод будет работать только для менеджера и администратора
+        if not self.user or self.user.role not in ['менеджер', 'администратор']:
+            return
+            
         search_text = self.search_input.text()
         supplier_filter = self.supplier_combo.currentText()
         if supplier_filter == "Все поставщики":
@@ -201,48 +226,32 @@ class ProductListWindow(QWidget):
         self.products = ProductService.get_products_with_filters(
             search_text, supplier_filter, sort_by
         )
-        self.table_model.products = self.products
-        self.table_model.layoutChanged.emit()
+        
+        # Обновляем отображение карточек
+        for i in reversed(range(self.scroll_layout.count())): 
+            widget = self.scroll_layout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+        
+        # Импортируем здесь
+        from views.product_card_widget import ProductCardWidget
+        
+        for product in self.products:
+            card = ProductCardWidget(product, self.user)
+            self.scroll_layout.addWidget(card)
+        
+        self.scroll_layout.addStretch()
     
     def add_product(self):
         if self.user and self.user.role == 'администратор':
+            from views.product_edit_window import ProductEditWindow
             edit_window = ProductEditWindow(parent=self)
             edit_window.product_saved.connect(self.load_products)
             edit_window.show()
     
     def edit_selected_product(self):
-        selected = self.table_view.selectionModel().selectedRows()
-        if selected:
-            self.edit_product(selected[0])
-        else:
-            QMessageBox.warning(self, "Ошибка", "Выберите товар для редактирования")
-    
-    def edit_product(self, index):
-        if self.user and self.user.role == 'администратор':
-            product = self.products[index.row()]
-            edit_window = ProductEditWindow(product, parent=self)
-            edit_window.product_saved.connect(self.load_products)
-            edit_window.show()
+        QMessageBox.information(self, "Информация", "Для редактирования используйте форму добавления/редактирования товаров")
     
     def delete_product(self):
         if self.user and self.user.role == 'администратор':
-            selected = self.table_view.selectionModel().selectedRows()
-            if not selected:
-                QMessageBox.warning(self, "Ошибка", "Выберите товар для удаления")
-                return
-            
-            product = self.products[selected[0].row()]
-            reply = QMessageBox.question(
-                self, 
-                "Подтверждение удаления",
-                f"Вы уверены, что хотите удалить товар '{product.name}'?",
-                QMessageBox.Yes | QMessageBox.No
-            )
-            
-            if reply == QMessageBox.Yes:
-                success, message = ProductService.delete_product(product.article)
-                if success:
-                    QMessageBox.information(self, "Успех", message)
-                    self.load_products()
-                else:
-                    QMessageBox.critical(self, "Ошибка", message)
+            QMessageBox.information(self, "Информация", "Для удаления товаров используйте форму управления товарами")
