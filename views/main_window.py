@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QStatusBar)
+# views/main_window.py - исправленный метод setup_toolbar
+from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QStatusBar, QToolBar)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QToolBar
+
 from views.product_list_window import ProductListWindow
 from views.order_list_window import OrderListWindow
 
@@ -14,11 +15,10 @@ class MainWindow(QMainWindow):
         
         print(f"🎯 Создано главное окно для пользователя: {user.full_name if user else 'Гость'}")
         
-        # Устанавливаем фон для главного окна
+        # Устанавливаем белый фон
         self.setStyleSheet("""
             QMainWindow {
-                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
-                    stop: 0 #f8f9fa, stop: 0.5 #e9ecef, stop: 1 #f8f9fa);
+                background-color: #FFFFFF;
             }
         """)
         
@@ -48,6 +48,31 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
         
+        # Стиль для тулбара
+        toolbar.setStyleSheet("""
+            QToolBar {
+                background-color: #7FFF00;  /* Дополнительный фон из руководства */
+                border: none;
+                spacing: 10px;
+                padding: 5px;
+            }
+            QToolButton {
+                background-color: #00FA9A;  /* Акцентный цвет */
+                color: #000000;  /* Черный текст */
+                border: 1px solid #00FA9A;
+                border-radius: 4px;
+                padding: 5px 15px;
+                font-family: "Times New Roman";
+                font-weight: bold;
+            }
+            QToolButton:hover {
+                background-color: #00E58B;
+            }
+            QToolButton:pressed {
+                background-color: #00D07A;
+            }
+        """)
+        
         # Кнопка "Товары"
         products_action = QAction("Товары", self)
         products_action.triggered.connect(self.show_products)
@@ -62,7 +87,7 @@ class MainWindow(QMainWindow):
         
         toolbar.addSeparator()
         
-        # Кнопка выхода
+        # Кнопка выхода - работает правильно
         logout_action = QAction("Выйти", self)
         logout_action.triggered.connect(self.logout)
         toolbar.addAction(logout_action)
@@ -71,6 +96,14 @@ class MainWindow(QMainWindow):
     
     def setup_statusbar(self):
         statusbar = QStatusBar()
+        statusbar.setStyleSheet("""
+            QStatusBar {
+                background-color: #7FFF00;  /* Дополнительный фон */
+                color: #000000;
+                font-family: "Times New Roman";
+                border-top: 1px solid #cccccc;
+            }
+        """)
         user_info = f"Пользователь: {self.user.full_name if self.user else 'Гость'} ({self.user.role if self.user else 'Гость'})"
         statusbar.showMessage(user_info)
         self.setStatusBar(statusbar)
@@ -97,8 +130,46 @@ class MainWindow(QMainWindow):
     
     def logout(self):
         print("🔄 Выход из системы...")
+        
+        # Получаем экземпляр приложения
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance()
+        
+        # Создаем новое окно входа
         from views.login_window import LoginWindow
-        login_window = LoginWindow()
-        login_window.show()
+        app.login_window = LoginWindow()
+        
+        # Подключаем обработчики для нового окна входа
+        def on_login_success(user):
+            print(f"🔄 Открываем главное окно для пользователя: {user.full_name}")
+            app.set_current_user(user)
+            app.login_window.close()
+            app.login_window = None
+            
+            # Создаем и показываем главное окно
+            app.main_window = MainWindow(user)
+            app.main_window.show()
+            print("✅ Главное окно открыто")
+
+        def on_guest_login():
+            print("🔄 Открываем главное окно для гостя")
+            app.set_current_user(None)
+            app.login_window.close()
+            app.login_window = None
+            
+            # Создаем и показываем главное окно для гостя
+            app.main_window = MainWindow(None)
+            app.main_window.show()
+            print("✅ Главное окно открыто для гостя")
+        
+        app.login_window.login_success.connect(on_login_success)
+        app.login_window.guest_login.connect(on_guest_login)
+        
+        # Показываем окно входа
+        app.login_window.show()
+        
+        # Закрываем текущее главное окно
         self.close()
+        app.main_window = None
+        
         print("✅ Возврат к окну входа")

@@ -29,47 +29,71 @@ class LoginWindow(QWidget):
                 font-family: "Times New Roman";
                 background-color: white;
                 color: #000000;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                padding: 8px;
             }
             QPushButton {
                 font-family: "Times New Roman";
             }
         """)
+        
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
         layout.setSpacing(20)
+        layout.setContentsMargins(50, 30, 50, 30)  # Отступы по 50 пикселей с боков
         
         # Заголовок
         title_label = QLabel("Магазин обуви")
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setFont(QFont("Arial", 18, QFont.Bold))
+        title_label.setFont(QFont("Times New Roman", 20, QFont.Bold))
+        title_label.setStyleSheet("color: #000000; margin-bottom: 10px;")
         
-        # Логотип
-        logo_label = QLabel()
-        if os.path.exists("resources/images/logo.png"):
-            pixmap = QPixmap("resources/images/logo.png")
-            logo_label.setPixmap(pixmap.scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        logo_label.setAlignment(Qt.AlignCenter)
         
         # Форма входа
         form_frame = QFrame()
-        form_frame.setFrameStyle(QFrame.StyledPanel)
+        form_frame.setObjectName("loginForm")
+        form_frame.setStyleSheet("""
+            QFrame#loginForm {
+                background-color: white;
+                border: 2px solid #dee2e6;
+                border-radius: 10px;
+                padding: 20px;
+            }
+        """)
+        
         form_layout = QVBoxLayout()
         form_layout.setSpacing(15)
+        form_layout.setContentsMargins(20, 15, 20, 15)  # Внутренние отступы формы
+        
+        # Заголовок формы
+        form_title = QLabel("Вход в систему")
+        form_title.setAlignment(Qt.AlignCenter)
+        form_title.setFont(QFont("Times New Roman", 14, QFont.Bold))
+        form_title.setStyleSheet("color: #000000; margin-bottom: 10px;")
         
         # Поле логина
         login_layout = QVBoxLayout()
         login_label = QLabel("Логин:")
+        login_label.setStyleSheet("color: #000000; font-weight: bold;")
+        
         self.login_input = QLineEdit()
         self.login_input.setPlaceholderText("Введите ваш логин")
+        self.login_input.setMinimumHeight(35)
+        
         login_layout.addWidget(login_label)
         login_layout.addWidget(self.login_input)
         
         # Поле пароля
         password_layout = QVBoxLayout()
         password_label = QLabel("Пароль:")
+        password_label.setStyleSheet("color: #000000; font-weight: bold;")
+        
         self.password_input = QLineEdit()
         self.password_input.setPlaceholderText("Введите ваш пароль")
         self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_input.setMinimumHeight(35)
+        
         password_layout.addWidget(password_label)
         password_layout.addWidget(self.password_input)
         
@@ -78,30 +102,49 @@ class LoginWindow(QWidget):
         button_layout.setSpacing(10)
         
         self.login_btn = QPushButton("Войти")
+        self.login_btn.setObjectName("login_btn")
         self.login_btn.setMinimumHeight(40)
         self.login_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2E8B57;
-                color: white;
+            QPushButton#login_btn {
+                background-color: #00FA9A;  /* Акцентный цвет */
+                color: #000000;
                 border: none;
                 border-radius: 5px;
                 font-weight: bold;
+                font-size: 11pt;
             }
-            QPushButton:hover {
-                background-color: #3CB371;
+            QPushButton#login_btn:hover {
+                background-color: #00E58B;
             }
-            QPushButton:pressed {
-                background-color: #228B22;
+            QPushButton#login_btn:pressed {
+                background-color: #00D07A;
             }
         """)
         
         self.guest_btn = QPushButton("Войти как гость")
+        self.guest_btn.setObjectName("guest_btn")
         self.guest_btn.setMinimumHeight(35)
+        self.guest_btn.setStyleSheet("""
+            QPushButton#guest_btn {
+                background-color: #7FFF00;  /* Дополнительный фон */
+                color: #000000;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+            }
+            QPushButton#guest_btn:hover {
+                background-color: #72E500;
+            }
+            QPushButton#guest_btn:pressed {
+                background-color: #65CC00;
+            }
+        """)
         
         button_layout.addWidget(self.login_btn)
         button_layout.addWidget(self.guest_btn)
         
         # Собираем форму
+        form_layout.addWidget(form_title)
         form_layout.addLayout(login_layout)
         form_layout.addLayout(password_layout)
         form_layout.addLayout(button_layout)
@@ -109,8 +152,8 @@ class LoginWindow(QWidget):
         
         # Собираем главный layout
         layout.addWidget(title_label)
-        layout.addWidget(logo_label)
         layout.addWidget(form_frame)
+        layout.addStretch()
         
         # Подключаем сигналы
         self.login_btn.clicked.connect(self.authenticate)
