@@ -1,7 +1,9 @@
-# views/main_window.py - исправленный метод setup_toolbar
-from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QStatusBar, QToolBar)
+# views/main_window.py
+from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QStatusBar, 
+                             QToolBar, QLabel, QHBoxLayout, QWidget, 
+                             QSpacerItem, QSizePolicy)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QFont
 
 from views.product_list_window import ProductListWindow
 from views.order_list_window import OrderListWindow
@@ -34,9 +36,6 @@ class MainWindow(QMainWindow):
         # Создаем тулбар
         self.setup_toolbar()
         
-        # Создаем статусбар
-        self.setup_statusbar()
-        
         # Показываем окно товаров по умолчанию
         self.show_products()
         
@@ -46,6 +45,7 @@ class MainWindow(QMainWindow):
         print("🔄 Создание панели инструментов...")
         toolbar = QToolBar()
         toolbar.setMovable(False)
+        toolbar.setFixedHeight(50)
         self.addToolBar(toolbar)
         
         # Стиль для тулбара
@@ -53,61 +53,126 @@ class MainWindow(QMainWindow):
             QToolBar {
                 background-color: #7FFF00;  /* Дополнительный фон из руководства */
                 border: none;
+                border-bottom: 2px solid #5CB800;
                 spacing: 10px;
-                padding: 5px;
+                padding: 5px 10px;
             }
             QToolButton {
                 background-color: #00FA9A;  /* Акцентный цвет */
                 color: #000000;  /* Черный текст */
                 border: 1px solid #00FA9A;
                 border-radius: 4px;
-                padding: 5px 15px;
+                padding: 8px 20px;
                 font-family: "Times New Roman";
                 font-weight: bold;
+                font-size: 11pt;
+                min-height: 30px;
             }
             QToolButton:hover {
                 background-color: #00E58B;
+                border-color: #00E58B;
             }
             QToolButton:pressed {
                 background-color: #00D07A;
+                border-color: #00D07A;
             }
         """)
         
         # Кнопка "Товары"
-        products_action = QAction("Товары", self)
-        products_action.triggered.connect(self.show_products)
-        toolbar.addAction(products_action)
+        self.products_action = QAction("Товары", self)
+        self.products_action.triggered.connect(self.show_products)
+        toolbar.addAction(self.products_action)
         
         # Кнопка "Заказы" (только для менеджера и администратора)
         if self.user and self.user.role in ['менеджер', 'администратор']:
-            orders_action = QAction("Заказы", self)
-            orders_action.triggered.connect(self.show_orders)
-            toolbar.addAction(orders_action)
+            self.orders_action = QAction("Заказы", self)
+            self.orders_action.triggered.connect(self.show_orders)
+            toolbar.addAction(self.orders_action)
             print("✅ Добавлена кнопка 'Заказы'")
         
-        toolbar.addSeparator()
+        # Растягивающий элемент между кнопками и информацией о пользователе
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        spacer_action = toolbar.addWidget(spacer)
         
-        # Кнопка выхода - работает правильно
-        logout_action = QAction("Выйти", self)
-        logout_action.triggered.connect(self.logout)
-        toolbar.addAction(logout_action)
+        # Создаем виджет с информацией о пользователе
+        self.user_widget = self.create_user_widget()
+        self.user_widget_action = toolbar.addWidget(self.user_widget)
+        
+        # Кнопка выхода
+        self.logout_action = QAction("Выйти", self)
+        self.logout_action.triggered.connect(self.logout)
+        toolbar.addAction(self.logout_action)
         
         print("✅ Панель инструментов создана")
     
-    def setup_statusbar(self):
-        statusbar = QStatusBar()
-        statusbar.setStyleSheet("""
-            QStatusBar {
-                background-color: #7FFF00;  /* Дополнительный фон */
-                color: #000000;
-                font-family: "Times New Roman";
-                border-top: 1px solid #cccccc;
-            }
-        """)
-        user_info = f"Пользователь: {self.user.full_name if self.user else 'Гость'} ({self.user.role if self.user else 'Гость'})"
-        statusbar.showMessage(user_info)
-        self.setStatusBar(statusbar)
-        print(f"✅ Статусбар установлен: {user_info}")
+    def create_user_widget(self):
+        """Создаем виджет с информацией о пользователе"""
+        user_widget = QWidget()
+        user_layout = QHBoxLayout(user_widget)
+        user_layout.setContentsMargins(10, 0, 10, 0)
+        user_layout.setSpacing(8)
+        
+        # Информация о пользователе
+        if self.user:
+            # ФИО пользователя
+            name_label = QLabel(f"👤 {self.user.full_name}")
+            name_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+            name_label.setStyleSheet("""
+                QLabel {
+                    color: #000000;
+                    background-color: rgba(255, 255, 255, 0.7);
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+            """)
+            
+            # Роль пользователя
+            role_label = QLabel(f"({self.user.role})")
+            role_label.setFont(QFont("Times New Roman", 9))
+            role_label.setStyleSheet("""
+                QLabel {
+                    color: #555555;
+                    background-color: rgba(245, 245, 245, 0.7);
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                    font-style: italic;
+                }
+            """)
+        else:
+            # Для гостя
+            name_label = QLabel("👤 Гость")
+            name_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+            name_label.setStyleSheet("""
+                QLabel {
+                    color: #000000;
+                    background-color: rgba(255, 255, 255, 0.7);
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+            """)
+            
+            role_label = QLabel("(неавторизованный)")
+            role_label.setFont(QFont("Times New Roman", 9))
+            role_label.setStyleSheet("""
+                QLabel {
+                    color: #555555;
+                    background-color: rgba(245, 245, 245, 0.7);
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                    font-style: italic;
+                }
+            """)
+        
+        # Добавляем элементы
+        user_layout.addWidget(name_label)
+        user_layout.addWidget(role_label)
+        
+        return user_widget
     
     def show_products(self):
         """Показать окно списка товаров"""
@@ -131,45 +196,15 @@ class MainWindow(QMainWindow):
     def logout(self):
         print("🔄 Выход из системы...")
         
-        # Получаем экземпляр приложения
-        from PySide6.QtWidgets import QApplication
-        app = QApplication.instance()
+        # Закрываем текущее окно
+        self.close()
         
         # Создаем новое окно входа
+        from PySide6.QtWidgets import QApplication
         from views.login_window import LoginWindow
-        app.login_window = LoginWindow()
         
-        # Подключаем обработчики для нового окна входа
-        def on_login_success(user):
-            print(f"🔄 Открываем главное окно для пользователя: {user.full_name}")
-            app.set_current_user(user)
-            app.login_window.close()
-            app.login_window = None
-            
-            # Создаем и показываем главное окно
-            app.main_window = MainWindow(user)
-            app.main_window.show()
-            print("✅ Главное окно открыто")
-
-        def on_guest_login():
-            print("🔄 Открываем главное окно для гостя")
-            app.set_current_user(None)
-            app.login_window.close()
-            app.login_window = None
-            
-            # Создаем и показываем главное окно для гостя
-            app.main_window = MainWindow(None)
-            app.main_window.show()
-            print("✅ Главное окно открыто для гостя")
-        
-        app.login_window.login_success.connect(on_login_success)
-        app.login_window.guest_login.connect(on_guest_login)
-        
-        # Показываем окно входа
-        app.login_window.show()
-        
-        # Закрываем текущее главное окно
-        self.close()
-        app.main_window = None
+        app = QApplication.instance()
+        login_window = LoginWindow()
+        login_window.show()
         
         print("✅ Возврат к окну входа")
