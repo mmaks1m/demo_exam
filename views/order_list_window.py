@@ -1,8 +1,9 @@
+# views/order_list_window.py - ИСПРАВЛЕНИЕ ЦВЕТА ТЕКСТА В ТАБЛИЦЕ
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QTableView, QPushButton, QMessageBox, QFrame,
                              QHeaderView)
 from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QFont
 
 from order_service import OrderService
 from views.order_edit_window import OrderEditWindow
@@ -37,19 +38,31 @@ class OrderTableModel(QAbstractTableModel):
             
         elif role == Qt.BackgroundRole:
             # Подсветка статусов
-            status = order.status.lower()
+            status = order.status.lower() if order.status else ""
             if status in ['выполнен', 'доставлен']:
-                return QBrush(QColor("#d4edda"))  # Зеленый
+                return QBrush(QColor("#d4edda"))
             elif status in ['отменен', 'отменён']:
-                return QBrush(QColor("#f8d7da"))  # Красный
+                return QBrush(QColor("#f8d7da"))
             elif status in ['в обработке', 'обработка']:
-                return QBrush(QColor("#fff3cd"))  # Желтый
+                return QBrush(QColor("#fff3cd"))
                 
+        elif role == Qt.ForegroundRole:  # ДОБАВЛЯЕМ: цвет текста
+            return QBrush(QColor("#000000"))  # ЧЕРНЫЙ ТЕКСТ
+        
+        elif role == Qt.FontRole:
+            font = QFont("Times New Roman", 10)
+            return font
+            
         return None
     
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self.headers[section]
+        elif role == Qt.FontRole:
+            font = QFont("Times New Roman", 10, QFont.Bold)
+            return font
+        elif role == Qt.ForegroundRole:  # ДОБАВЛЯЕМ: цвет заголовков
+            return QBrush(QColor("#000000"))
         return None
 
 class OrderListWindow(QWidget):
@@ -62,10 +75,16 @@ class OrderListWindow(QWidget):
         
     def setup_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
         
         # Заголовок
         title_label = QLabel("Управление заказами")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2E8B57; margin: 10px;")
+        title_label.setStyleSheet("""
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #2E8B57; 
+            margin: 10px;
+        """)
         
         # Таблица заказов
         self.setup_table()
@@ -86,9 +105,38 @@ class OrderListWindow(QWidget):
         self.table_view.setModel(self.table_model)
         
         # Настройка внешнего вида таблицы
+        self.table_view.setStyleSheet("""
+            QTableView {
+                background-color: white;
+                border: 1px solid #cccccc;
+                gridline-color: #cccccc;
+                alternate-background-color: #f8f9fa;
+                selection-background-color: #00FA9A;
+                selection-color: #000000;
+            }
+            QTableView::item {
+                padding: 5px;
+                border-right: 1px solid #cccccc;
+                border-bottom: 1px solid #cccccc;
+            }
+            QHeaderView::section {
+                background-color: #7FFF00;
+                color: #000000;
+                padding: 8px;
+                border: 1px solid #5CB800;
+                font-weight: bold;
+            }
+            QHeaderView::section:checked {
+                background-color: #00FA9A;
+            }
+        """)
+        
         header = self.table_view.horizontalHeader()
-        header.setSectionResizeMode(3, QHeaderView.Stretch)  # Пользователь растягивается
-        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)  # Пункт выдачи
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
+        
+        # Устанавливаем высоту строк
+        self.table_view.verticalHeader().setDefaultSectionSize(35)
         
         # Двойной клик для редактирования
         if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
@@ -101,6 +149,30 @@ class OrderListWindow(QWidget):
         self.add_btn = QPushButton("Добавить заказ")
         self.edit_btn = QPushButton("Редактировать заказ")
         self.delete_btn = QPushButton("Удалить заказ")
+        
+        # Стиль кнопок
+        button_style = """
+            QPushButton {
+                background-color: #7FFF00;
+                color: #000000;
+                border: 2px solid #5CB800;
+                border-radius: 4px;
+                padding: 8px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #00FA9A;
+                border-color: #00E58B;
+            }
+            QPushButton:pressed {
+                background-color: #00D07A;
+                border-color: #00D07A;
+            }
+        """
+        
+        self.add_btn.setStyleSheet(button_style)
+        self.edit_btn.setStyleSheet(button_style)
+        self.delete_btn.setStyleSheet(button_style)
         
         self.add_btn.clicked.connect(self.add_order)
         self.edit_btn.clicked.connect(self.edit_selected_order)

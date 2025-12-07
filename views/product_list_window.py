@@ -105,8 +105,9 @@ class ProductListWindow(QWidget):
         layout.setColumnStretch(3, 1)
         
         # === ПОИСК ===
-        search_label = QLabel("🔍 ПОИСК:")
+        search_label = QLabel("ПОИСК:")
         search_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+        search_label.setStyleSheet("color: #000000;")  # Добавляем черный цвет
         
         self.search_input = QLineEdit()
         self.search_input.setObjectName("searchInput")
@@ -121,6 +122,7 @@ class ProductListWindow(QWidget):
                 background-color: white;
                 font-family: "Times New Roman";
                 font-size: 14px;
+                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ */
             }
             QLineEdit#searchInput:focus {
                 border: 2px solid #00FA9A;
@@ -129,14 +131,15 @@ class ProductListWindow(QWidget):
             QLineEdit#searchInput:hover {
                 border: 2px solid #00FA9A;
             }
+            QLineEdit#searchInput::placeholder {
+                color: #666666;  /* ТЕМНО-СЕРЫЙ ДЛЯ ПЛЕЙСХОЛДЕРА */
+            }
         """)
         
-        # Подключаем поиск в реальном времени
-        self.search_input.textChanged.connect(self.apply_filters)
-        
         # === ФИЛЬТР ПО ПОСТАВЩИКУ ===
-        filter_label = QLabel("🏭 ФИЛЬТР:")
+        filter_label = QLabel("ФИЛЬТР:")
         filter_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+        filter_label.setStyleSheet("color: #000000;")  # Добавляем черный цвет
         
         self.supplier_filter = QComboBox()
         self.supplier_filter.setObjectName("supplierFilter")
@@ -149,6 +152,7 @@ class ProductListWindow(QWidget):
                 background-color: white;
                 font-family: "Times New Roman";
                 font-size: 14px;
+                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ */
             }
             QComboBox#supplierFilter:hover {
                 border: 2px solid #00FA9A;
@@ -156,12 +160,28 @@ class ProductListWindow(QWidget):
             QComboBox#supplierFilter:focus {
                 border: 2px solid #00FA9A;
             }
+            QComboBox#supplierFilter::drop-down {
+                border: none;
+            }
+            QComboBox#supplierFilter QAbstractItemView {
+                background-color: white;
+                border: 1px solid #ccc;
+                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ В ВЫПАДАЮЩЕМ СПИСКЕ */
+            }
+            QComboBox#supplierFilter QAbstractItemView::item:hover {
+                background-color: #00FA9A;
+                color: #000000;
+            }
+            QComboBox#supplierFilter QAbstractItemView::item:selected {
+                background-color: #7FFF00;
+                color: #000000;
+            }
         """)
-        self.supplier_filter.currentTextChanged.connect(self.apply_filters)
         
         # === СОРТИРОВКА ===
-        sort_label = QLabel("📊 СОРТИРОВКА:")
+        sort_label = QLabel("СОРТИРОВКА:")
         sort_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+        sort_label.setStyleSheet("color: #000000;")  # Добавляем черный цвет
         
         self.sort_combo = QComboBox()
         self.sort_combo.setObjectName("sortCombo")
@@ -182,12 +202,29 @@ class ProductListWindow(QWidget):
                 background-color: white;
                 font-family: "Times New Roman";
                 font-size: 14px;
+                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ */
             }
             QComboBox#sortCombo:hover {
                 border: 2px solid #00FA9A;
             }
             QComboBox#sortCombo:focus {
                 border: 2px solid #00FA9A;
+            }
+            QComboBox#sortCombo::drop-down {
+                border: none;
+            }
+            QComboBox#sortCombo QAbstractItemView {
+                background-color: white;
+                border: 1px solid #ccc;
+                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ В ВЫПАДАЮЩЕМ СПИСКЕ */
+            }
+            QComboBox#sortCombo QAbstractItemView::item:hover {
+                background-color: #00FA9A;
+                color: #000000;
+            }
+            QComboBox#sortCombo QAbstractItemView::item:selected {
+                background-color: #7FFF00;
+                color: #000000;
             }
         """)
         self.sort_combo.currentTextChanged.connect(self.apply_filters)
@@ -200,26 +237,26 @@ class ProductListWindow(QWidget):
             btn_layout = QHBoxLayout()
             btn_layout.setSpacing(10)
             
-            self.add_btn = QPushButton("➕ ДОБАВИТЬ ТОВАР")
+            self.add_btn = QPushButton("ДОБАВИТЬ ТОВАР")
             self.add_btn.setMinimumHeight(40)
             self.add_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #2E8B57;
-                    color: white;
+                    background-color: #7FFF00;
+                    color: black;
                     font-weight: bold;
                     padding: 10px 20px;
                     border-radius: 6px;
-                    border: 2px solid #2E8B57;
+                    border: 2px solid #7FFF00;
                     font-family: "Times New Roman";
                     font-size: 14px;
                 }
                 QPushButton:hover {
-                    background-color: #3CB371;
-                    border-color: #3CB371;
+                    background-color: #00FA9A;
+                    border-color: #00FA9A;
                 }
                 QPushButton:pressed {
-                    background-color: #228B22;
-                    border-color: #228B22;
+                    background-color: #00FA9A;
+                    border-color: #00FA9A;
                 }
             """)
             self.add_btn.clicked.connect(self.add_product)

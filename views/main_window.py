@@ -1,8 +1,8 @@
-# views/main_window.py - ИСПРАВЛЯЕМ РЕГИСТР РОЛЕЙ
+# views/main_window.py - ИСПРАВЛЕННАЯ ВЕРСИЯ
 from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QToolBar, 
                              QLabel, QWidget, QSizePolicy)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QFont, QIcon
+from PySide6.QtGui import QAction, QFont, QIcon, QPalette, QColor
 import os
 
 class MainWindow(QMainWindow):
@@ -18,6 +18,7 @@ class MainWindow(QMainWindow):
         if os.path.exists("resources/images/icon.png"):
             self.setWindowIcon(QIcon("resources/images/icon.png"))
         
+        # УПРОЩЕННЫЙ СТИЛЬ - убираем глобальные стили для QToolButton
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #FFFFFF;
@@ -25,14 +26,16 @@ class MainWindow(QMainWindow):
             }
         """)
         
+        # Устанавливаем цвет фона через палитру (более надежно)
+        palette = self.palette()
+        palette.setColor(QPalette.Window, QColor("#FFFFFF"))
+        self.setPalette(palette)
+        
         self.setup_ui()
         
-        print(f"🔧 MainWindow создан для: {user.full_name if user else 'Гость'}")
-        if user:
-            print(f"   Роль пользователя: {user.role}")
-    
     def setup_ui(self):
         self.central_widget = QStackedWidget()
+        self.central_widget.setContentsMargins(0, 0, 0, 0)
         self.setCentralWidget(self.central_widget)
         
         self.setup_toolbar()
@@ -41,17 +44,20 @@ class MainWindow(QMainWindow):
     def setup_toolbar(self):
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        self.addToolBar(toolbar)
+        toolbar.setObjectName("mainToolbar")  # Даем имя для селектора стилей
         
+        # Стиль ТОЛЬКО для этого тулбара
         toolbar.setStyleSheet("""
-            QToolBar {
+            QToolBar#mainToolbar {
                 background-color: #7FFF00;
                 border: none;
                 border-bottom: 2px solid #5CB800;
-                spacing: 10px;
-                padding: 5px 10px;
+                spacing: 5px;
+                padding: 2px 5px;
+                margin: 0px;
             }
-            QToolButton {
+            /* Стиль для QToolButton внутри этого тулбара */
+            QToolBar#mainToolbar QToolButton {
                 background-color: #00FA9A;
                 color: #000000;
                 border: 1px solid #00FA9A;
@@ -59,35 +65,49 @@ class MainWindow(QMainWindow):
                 padding: 5px 15px;
                 font-family: "Times New Roman";
                 font-weight: bold;
+                min-width: 60px;
+            }
+            QToolBar#mainToolbar QToolButton:hover {
+                background-color: #00E58B;
+                border-color: #00E58B;
+            }
+            QToolBar#mainToolbar QToolButton:pressed {
+                background-color: #00D07A;
+                border-color: #00D07A;
+            }
+            /* Стиль для QToolButton в состоянии "включено" (нажата) */
+            QToolBar#mainToolbar QToolButton:checked {
+                background-color: #00D07A;
+                border-color: #00D07A;
             }
         """)
         
-        # Кнопка "Товары" - ВСЕГДА
+        self.addToolBar(toolbar)
+        
+        # Кнопки
         products_action = QAction("Товары", self)
         products_action.triggered.connect(self.show_products)
         toolbar.addAction(products_action)
         
-        # Кнопка "Заказы" - ТОЛЬКО для менеджера и администратора (ИСПРАВЛЕНО РЕГИСТР!)
         if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
             orders_action = QAction("Заказы", self)
             orders_action.triggered.connect(self.show_orders)
             toolbar.addAction(orders_action)
-            print("   ✅ Кнопка 'Заказы' добавлена")
         
         # Растягивающий элемент
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        spacer.setStyleSheet("background-color: transparent;")  # Прозрачный фон
         toolbar.addWidget(spacer)
         
-        # Кнопка "Выйти" - ВСЕГДА
+        # Кнопка выхода
         logout_action = QAction("Выйти", self)
         logout_action.triggered.connect(self.logout)
         toolbar.addAction(logout_action)
         
-        # ФИО пользователя или "Гость"
+        # ФИО пользователя
         if self.user:
             user_text = self.user.full_name
-            # Для роли "Клиент" не показываем скобки
             if self.user.role.lower() == 'клиент':
                 role_text = ""
             else:
@@ -101,14 +121,14 @@ class MainWindow(QMainWindow):
         user_label.setStyleSheet("""
             QLabel {
                 color: #000000;
-                background-color: rgba(255, 255, 255, 0.5);
-                padding: 5px 15px;
-                border-radius: 4px;
+                background-color: rgba(255, 255, 255, 0.7);
+                padding: 3px 10px;
+                border-radius: 3px;
+                margin-right: 5px;
+                border: 1px solid rgba(0, 0, 0, 0.1);
             }
         """)
         toolbar.addWidget(user_label)
-        
-        print(f"   👤 В тулбаре отображается: {user_text}{role_text}")
     
     def logout(self):
         print("🔒 Запрос на выход из системы")
@@ -131,14 +151,12 @@ class MainWindow(QMainWindow):
         self.central_widget.addWidget(product_window)
         self.central_widget.setCurrentWidget(product_window)
         
-        # Устанавливаем заголовок окна
         if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
             self.setWindowTitle("Товары - Магазин обуви (Режим управления)")
         else:
             self.setWindowTitle("Товары - Магазин обуви")
     
     def show_orders(self):
-        # ИСПРАВЛЕНО: проверяем role.lower()
         if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
             print("🔄 Открываем заказы...")
             

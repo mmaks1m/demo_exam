@@ -181,8 +181,40 @@ class LoginWindow(QWidget):
         self.setLayout(layout)
     
     def authenticate(self):
-        # ... существующий код без изменений ...
-        pass
+        login = self.login_input.text().strip()
+        password = self.password_input.text()
+
+        if not login:
+            QMessageBox.warning(self, "Ошибка", "Введите логин")
+            self.login_input.setFocus()
+            return
+
+        if not password:
+            QMessageBox.warning(self, "Ошибка", "Введите пароль")
+            self.password_input.setFocus()
+            return
+
+        # Показываем индикатор загрузки
+        self.login_btn.setText("Вход...")
+        self.login_btn.setEnabled(False)
+
+        print(f"🔐 Попытка входа: логин='{login}', пароль='{password}'")
+        
+        # Передаем пароль как есть, без хеширования
+        user = AuthService.authenticate(login, password)
+
+        # Восстанавливаем кнопку
+        self.login_btn.setText("Войти")
+        self.login_btn.setEnabled(True)
+
+        if user:
+            print(f"✅ Успешный вход: {user.full_name}")
+            self.login_success.emit(user)
+        else:
+            print("❌ Неверный логин или пароль")
+            QMessageBox.critical(self, "Ошибка", "Неверный логин или пароль")
+            self.password_input.clear()
+            self.password_input.setFocus()
     
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
