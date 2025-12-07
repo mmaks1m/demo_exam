@@ -1,210 +1,159 @@
-# views/main_window.py
-from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QStatusBar, 
-                             QToolBar, QLabel, QHBoxLayout, QWidget, 
-                             QSpacerItem, QSizePolicy)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QFont
-
-from views.product_list_window import ProductListWindow
-from views.order_list_window import OrderListWindow
+# views/main_window.py - ИСПРАВЛЯЕМ РЕГИСТР РОЛЕЙ
+from PySide6.QtWidgets import (QMainWindow, QStackedWidget, QToolBar, 
+                             QLabel, QWidget, QSizePolicy)
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction, QFont, QIcon
+import os
 
 class MainWindow(QMainWindow):
+    logout_requested = Signal()
+    
     def __init__(self, user):
         super().__init__()
         self.user = user
+        
         self.setWindowTitle("Магазин обуви")
         self.setGeometry(100, 50, 1200, 700)
         
-        print(f"🎯 Создано главное окно для пользователя: {user.full_name if user else 'Гость'}")
+        if os.path.exists("resources/images/icon.png"):
+            self.setWindowIcon(QIcon("resources/images/icon.png"))
         
-        # Устанавливаем белый фон
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #FFFFFF;
+                font-family: "Times New Roman";
             }
         """)
         
         self.setup_ui()
         
+        print(f"🔧 MainWindow создан для: {user.full_name if user else 'Гость'}")
+        if user:
+            print(f"   Роль пользователя: {user.role}")
+    
     def setup_ui(self):
-        print("🔄 Настройка интерфейса главного окна...")
-        
-        # Центральный виджет
         self.central_widget = QStackedWidget()
         self.setCentralWidget(self.central_widget)
         
-        # Создаем тулбар
         self.setup_toolbar()
-        
-        # Показываем окно товаров по умолчанию
         self.show_products()
-        
-        print("✅ Интерфейс главного окна настроен")
     
     def setup_toolbar(self):
-        print("🔄 Создание панели инструментов...")
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setFixedHeight(50)
         self.addToolBar(toolbar)
         
-        # Стиль для тулбара
         toolbar.setStyleSheet("""
             QToolBar {
-                background-color: #7FFF00;  /* Дополнительный фон из руководства */
+                background-color: #7FFF00;
                 border: none;
                 border-bottom: 2px solid #5CB800;
                 spacing: 10px;
                 padding: 5px 10px;
             }
             QToolButton {
-                background-color: #00FA9A;  /* Акцентный цвет */
-                color: #000000;  /* Черный текст */
+                background-color: #00FA9A;
+                color: #000000;
                 border: 1px solid #00FA9A;
                 border-radius: 4px;
-                padding: 8px 20px;
+                padding: 5px 15px;
                 font-family: "Times New Roman";
                 font-weight: bold;
-                font-size: 11pt;
-                min-height: 30px;
-            }
-            QToolButton:hover {
-                background-color: #00E58B;
-                border-color: #00E58B;
-            }
-            QToolButton:pressed {
-                background-color: #00D07A;
-                border-color: #00D07A;
             }
         """)
         
-        # Кнопка "Товары"
-        self.products_action = QAction("Товары", self)
-        self.products_action.triggered.connect(self.show_products)
-        toolbar.addAction(self.products_action)
+        # Кнопка "Товары" - ВСЕГДА
+        products_action = QAction("Товары", self)
+        products_action.triggered.connect(self.show_products)
+        toolbar.addAction(products_action)
         
-        # Кнопка "Заказы" (только для менеджера и администратора)
-        if self.user and self.user.role in ['менеджер', 'администратор']:
-            self.orders_action = QAction("Заказы", self)
-            self.orders_action.triggered.connect(self.show_orders)
-            toolbar.addAction(self.orders_action)
-            print("✅ Добавлена кнопка 'Заказы'")
+        # Кнопка "Заказы" - ТОЛЬКО для менеджера и администратора (ИСПРАВЛЕНО РЕГИСТР!)
+        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
+            orders_action = QAction("Заказы", self)
+            orders_action.triggered.connect(self.show_orders)
+            toolbar.addAction(orders_action)
+            print("   ✅ Кнопка 'Заказы' добавлена")
         
-        # Растягивающий элемент между кнопками и информацией о пользователе
+        # Растягивающий элемент
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        spacer_action = toolbar.addWidget(spacer)
+        toolbar.addWidget(spacer)
         
-        # Создаем виджет с информацией о пользователе
-        self.user_widget = self.create_user_widget()
-        self.user_widget_action = toolbar.addWidget(self.user_widget)
+        # Кнопка "Выйти" - ВСЕГДА
+        logout_action = QAction("Выйти", self)
+        logout_action.triggered.connect(self.logout)
+        toolbar.addAction(logout_action)
         
-        # Кнопка выхода
-        self.logout_action = QAction("Выйти", self)
-        self.logout_action.triggered.connect(self.logout)
-        toolbar.addAction(self.logout_action)
-        
-        print("✅ Панель инструментов создана")
-    
-    def create_user_widget(self):
-        """Создаем виджет с информацией о пользователе"""
-        user_widget = QWidget()
-        user_layout = QHBoxLayout(user_widget)
-        user_layout.setContentsMargins(10, 0, 10, 0)
-        user_layout.setSpacing(8)
-        
-        # Информация о пользователе
+        # ФИО пользователя или "Гость"
         if self.user:
-            # ФИО пользователя
-            name_label = QLabel(f"👤 {self.user.full_name}")
-            name_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
-            name_label.setStyleSheet("""
-                QLabel {
-                    color: #000000;
-                    background-color: rgba(255, 255, 255, 0.7);
-                    padding: 5px 10px;
-                    border-radius: 4px;
-                    border: 1px solid rgba(0, 0, 0, 0.1);
-                }
-            """)
-            
-            # Роль пользователя
-            role_label = QLabel(f"({self.user.role})")
-            role_label.setFont(QFont("Times New Roman", 9))
-            role_label.setStyleSheet("""
-                QLabel {
-                    color: #555555;
-                    background-color: rgba(245, 245, 245, 0.7);
-                    padding: 5px 10px;
-                    border-radius: 4px;
-                    border: 1px solid rgba(0, 0, 0, 0.1);
-                    font-style: italic;
-                }
-            """)
+            user_text = self.user.full_name
+            # Для роли "Клиент" не показываем скобки
+            if self.user.role.lower() == 'клиент':
+                role_text = ""
+            else:
+                role_text = f" ({self.user.role})"
         else:
-            # Для гостя
-            name_label = QLabel("👤 Гость")
-            name_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
-            name_label.setStyleSheet("""
-                QLabel {
-                    color: #000000;
-                    background-color: rgba(255, 255, 255, 0.7);
-                    padding: 5px 10px;
-                    border-radius: 4px;
-                    border: 1px solid rgba(0, 0, 0, 0.1);
-                }
-            """)
-            
-            role_label = QLabel("(неавторизованный)")
-            role_label.setFont(QFont("Times New Roman", 9))
-            role_label.setStyleSheet("""
-                QLabel {
-                    color: #555555;
-                    background-color: rgba(245, 245, 245, 0.7);
-                    padding: 5px 10px;
-                    border-radius: 4px;
-                    border: 1px solid rgba(0, 0, 0, 0.1);
-                    font-style: italic;
-                }
-            """)
+            user_text = "Гость"
+            role_text = ""
         
-        # Добавляем элементы
-        user_layout.addWidget(name_label)
-        user_layout.addWidget(role_label)
+        user_label = QLabel(f"👤 {user_text}{role_text}")
+        user_label.setFont(QFont("Times New Roman", 11, QFont.Bold))
+        user_label.setStyleSheet("""
+            QLabel {
+                color: #000000;
+                background-color: rgba(255, 255, 255, 0.5);
+                padding: 5px 15px;
+                border-radius: 4px;
+            }
+        """)
+        toolbar.addWidget(user_label)
         
-        return user_widget
+        print(f"   👤 В тулбаре отображается: {user_text}{role_text}")
+    
+    def logout(self):
+        print("🔒 Запрос на выход из системы")
+        self.logout_requested.emit()
+        self.close()
     
     def show_products(self):
-        """Показать окно списка товаров"""
-        print("🔄 Открытие окна товаров...")
+        print("🔄 Открываем товары...")
+        
+        from views.product_list_window import ProductListWindow
+        
+        # Удаляем старый виджет если есть
+        for i in reversed(range(self.central_widget.count())):
+            widget = self.central_widget.widget(i)
+            if widget:
+                self.central_widget.removeWidget(widget)
+                widget.deleteLater()
+        
         product_window = ProductListWindow(self.user)
         self.central_widget.addWidget(product_window)
         self.central_widget.setCurrentWidget(product_window)
-        self.setWindowTitle("Товары - Магазин обуви")
-        print("✅ Окно товаров открыто")
+        
+        # Устанавливаем заголовок окна
+        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
+            self.setWindowTitle("Товары - Магазин обуви (Режим управления)")
+        else:
+            self.setWindowTitle("Товары - Магазин обуви")
     
     def show_orders(self):
-        """Показать окно списка заказов (только для менеджера и администратора)"""
-        if self.user and self.user.role in ['менеджер', 'администратор']:
-            print("🔄 Открытие окна заказов...")
+        # ИСПРАВЛЕНО: проверяем role.lower()
+        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
+            print("🔄 Открываем заказы...")
+            
+            from views.order_list_window import OrderListWindow
+            
+            for i in reversed(range(self.central_widget.count())):
+                widget = self.central_widget.widget(i)
+                if widget:
+                    self.central_widget.removeWidget(widget)
+                    widget.deleteLater()
+            
             order_window = OrderListWindow(self.user)
             self.central_widget.addWidget(order_window)
             self.central_widget.setCurrentWidget(order_window)
+            
             self.setWindowTitle("Заказы - Магазин обуви")
-            print("✅ Окно заказов открыто")
-    
-    def logout(self):
-        print("🔄 Выход из системы...")
-        
-        # Закрываем текущее окно
-        self.close()
-        
-        # Создаем новое окно входа
-        from PySide6.QtWidgets import QApplication
-        from views.login_window import LoginWindow
-        
-        app = QApplication.instance()
-        login_window = LoginWindow()
-        login_window.show()
-        
-        print("✅ Возврат к окну входа")
+        else:
+            print("⛔ Нет прав для просмотра заказов")

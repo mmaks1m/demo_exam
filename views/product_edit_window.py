@@ -1,12 +1,13 @@
+# views/product_edit_window.py
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox,
                              QTextEdit, QPushButton, QFileDialog, QMessageBox,
-                             QFrame, QGridLayout)
+                             QFrame, QGridLayout, QGroupBox)
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QIcon
+import os
 
 from product_service import ProductService
-import os
 
 class ProductEditWindow(QWidget):
     product_saved = Signal()
@@ -17,8 +18,12 @@ class ProductEditWindow(QWidget):
         self.is_editing = product is not None
         self.image_path = None
         
+        # Устанавливаем иконку
+        if os.path.exists("resources/images/icon.png"):
+            self.setWindowIcon(QIcon("resources/images/icon.png"))
+        
         self.setWindowTitle("Редактирование товара" if self.is_editing else "Добавление товара")
-        self.setFixedSize(600, 700)
+        self.setFixedSize(700, 750)
         self.setup_ui()
         self.load_data()
         
@@ -28,17 +33,31 @@ class ProductEditWindow(QWidget):
         # Заголовок
         title = QLabel("Редактирование товара" if self.is_editing else "Добавление нового товара")
         title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px;")
+        title.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px; color: #2E8B57;")
         
-        # Форма
-        form_frame = QFrame()
-        form_frame.setFrameStyle(QFrame.StyledPanel)
+        # Основная форма
+        form_group = QGroupBox("Информация о товаре")
+        form_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #7FFF00;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """)
+        
         form_layout = QGridLayout()
         form_layout.setSpacing(15)
         form_layout.setColumnStretch(1, 1)
         
-        # Артикул (только для чтения при редактировании)
-        form_layout.addWidget(QLabel("Артикул:"), 0, 0)
+        # Артикул
+        form_layout.addWidget(QLabel("Артикул*:"), 0, 0)
         self.article_input = QLineEdit()
         if self.is_editing:
             self.article_input.setReadOnly(True)
@@ -51,13 +70,24 @@ class ProductEditWindow(QWidget):
         form_layout.addWidget(self.name_input, 1, 1)
         
         # Категория
-        form_layout.addWidget(QLabel("Категория:"), 2, 0)
-        self.category_input = QLineEdit()
+        # Категория (выпадающий список)
+        form_layout.addWidget(QLabel("Категория*:"), 2, 0)
+        self.category_input = QComboBox()  # ← ИЗМЕНИТЕ на QComboBox
+        self.category_input.setEditable(True)  # Можно вводить новую категорию
+        self.category_input.addItems([
+            "Кроссовки", "Туфли", "Ботинки", "Сапоги", "Тапочки", 
+            "Сандалии", "Мокасины", "Босоножки", "Слипоны"
+        ])
         form_layout.addWidget(self.category_input, 2, 1)
-        
-        # Производитель
-        form_layout.addWidget(QLabel("Производитель:"), 3, 0)
-        self.manufacturer_input = QLineEdit()
+
+        # Производитель (выпадающий список)
+        form_layout.addWidget(QLabel("Производитель*:"), 3, 0)
+        self.manufacturer_input = QComboBox()  # ← ИЗМЕНИТЕ на QComboBox
+        self.manufacturer_input.setEditable(True)
+        self.manufacturer_input.addItems([
+            "Nike", "Adidas", "Reebok", "Puma", "New Balance",
+            "Geox", "Ecco", "Clarks", "Salomon", "Timberland"
+        ])
         form_layout.addWidget(self.manufacturer_input, 3, 1)
         
         # Поставщик
@@ -98,12 +128,13 @@ class ProductEditWindow(QWidget):
         form_layout.addWidget(QLabel("Изображение:"), 9, 0)
         image_layout = QHBoxLayout()
         self.image_label = QLabel()
-        self.image_label.setFixedSize(100, 100)
-        self.image_label.setStyleSheet("border: 1px solid #ccc; background-color: #f9f9f9;")
+        self.image_label.setFixedSize(150, 150)
+        self.image_label.setStyleSheet("border: 2px solid #cccccc; background-color: #f9f9f9;")
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setText("Нет\nизображения")
         
         self.load_image_btn = QPushButton("Загрузить")
+        self.load_image_btn.setStyleSheet("background-color: #00FA9A; color: #000000;")
         self.load_image_btn.clicked.connect(self.load_image)
         
         image_layout.addWidget(self.image_label)
@@ -117,12 +148,38 @@ class ProductEditWindow(QWidget):
         self.description_input.setMaximumHeight(100)
         form_layout.addWidget(self.description_input, 10, 1)
         
-        form_frame.setLayout(form_layout)
+        form_group.setLayout(form_layout)
         
         # Кнопки
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Сохранить")
         self.cancel_btn = QPushButton("Отмена")
+        
+        self.save_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2E8B57;
+                color: white;
+                font-weight: bold;
+                padding: 10px 25px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #3CB371;
+            }
+        """)
+        
+        self.cancel_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #6c757d;
+                color: white;
+                font-weight: bold;
+                padding: 10px 25px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #5a6268;
+            }
+        """)
         
         self.save_btn.clicked.connect(self.save_product)
         self.cancel_btn.clicked.connect(self.close)
@@ -132,15 +189,15 @@ class ProductEditWindow(QWidget):
         button_layout.addWidget(self.cancel_btn)
         
         layout.addWidget(title)
-        layout.addWidget(form_frame)
+        layout.addWidget(form_group)
         layout.addLayout(button_layout)
         
         self.setLayout(layout)
     
     def load_data(self):
         if self.is_editing and self.product:
-            self.article_input.setText(self.product.article)
-            self.name_input.setText(self.product.name)
+            self.article_input.setText(self.product.article or "")
+            self.name_input.setText(self.product.name or "")
             self.category_input.setText(self.product.category or "")
             self.manufacturer_input.setText(self.product.manufacturer or "")
             self.supplier_input.setText(self.product.supplier or "")
@@ -151,8 +208,10 @@ class ProductEditWindow(QWidget):
             self.description_input.setPlainText(self.product.description or "")
             
             # Загрузка изображения
-            if self.product.image_path and os.path.exists(self.product.image_path):
-                self.load_image_to_label(self.product.image_path)
+            if self.product.image_path:
+                image_path = f"resources/images/{self.product.image_path}"
+                if os.path.exists(image_path):
+                    self.load_image_to_label(image_path)
     
     def load_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -169,7 +228,7 @@ class ProductEditWindow(QWidget):
     def load_image_to_label(self, path):
         pixmap = QPixmap(path)
         if not pixmap.isNull():
-            scaled_pixmap = pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(150, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             self.image_label.setPixmap(scaled_pixmap)
             self.image_label.setText("")
     
@@ -195,8 +254,26 @@ class ProductEditWindow(QWidget):
             'discount': self.discount_input.value(),
             'unit': self.unit_input.text().strip(),
             'description': self.description_input.toPlainText().strip(),
-            'image_path': self.image_path or ''
         }
+        
+        # Обработка изображения
+        if self.image_path:
+            # Копируем изображение в папку ресурсов
+            import shutil
+            try:
+                # Генерируем имя файла
+                if self.is_editing:
+                    image_name = f"{self.product.article}.png"
+                else:
+                    # Для нового товара нужно сначала создать товар чтобы получить артикул
+                    image_name = "temp.png"
+                
+                dest_path = f"resources/images/{image_name}"
+                shutil.copy2(self.image_path, dest_path)
+                product_data['image_path'] = image_name
+            except Exception as e:
+                print(f"Ошибка копирования изображения: {e}")
+                QMessageBox.warning(self, "Ошибка", "Не удалось сохранить изображение")
         
         try:
             if self.is_editing:

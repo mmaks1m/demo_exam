@@ -1,257 +1,390 @@
-import os
-import sys
+# views/product_list_window.py - ИСПРАВЛЯЕМ РЕГИСТР РОЛЕЙ
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QLineEdit, QComboBox, QPushButton, QTableView,
-                             QHeaderView, QMessageBox, QFrame, QScrollArea)
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal
-from PySide6.QtGui import QColor, QFont, QBrush
+                             QLineEdit, QComboBox, QPushButton, QScrollArea,
+                             QFrame, QGridLayout, QMessageBox, QSizePolicy)
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QFont, QPalette, QColor
 
 from product_service import ProductService
 from views.product_edit_window import ProductEditWindow
 from views.product_card_widget import ProductCardWidget
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
-
-from product_service import ProductService
-
-
-class ProductTableModel(QAbstractTableModel):
-    def __init__(self, products=None):
-        super().__init__()
-        self.products = products or []
-        self.headers = ["Артикул", "Наименование", "Категория", "Цена", "В наличии", "Скидка", "Поставщик"]
-        
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.products)
-    
-    def columnCount(self, parent=QModelIndex()):
-        return len(self.headers)
-    
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid() or not (0 <= index.row() < len(self.products)):
-            return None
-            
-        product = self.products[index.row()]
-        col = index.column()
-        
-        if role == Qt.DisplayRole:
-            if col == 0: return product.article
-            elif col == 1: return product.name
-            elif col == 2: return product.category
-            elif col == 3: return f"{float(product.price):.2f} ₽"
-            elif col == 4: return product.stock_quantity
-            elif col == 5: return f"{product.discount}%"
-            elif col == 6: return product.supplier
-            
-        elif role == Qt.BackgroundRole:
-            # Подсветка согласно ТЗ
-            if product.discount > 15:
-                return QBrush(QColor("#2E8B57"))  # SeaGreen
-            elif product.stock_quantity == 0:
-                return QBrush(QColor("lightblue"))
-                
-        elif role == Qt.ForegroundRole:
-            if product.discount > 0 and col == 3:  # Цена со скидкой
-                return QBrush(QColor("red"))
-                
-        elif role == Qt.FontRole:
-            if product.discount > 0 and col == 3:
-                font = QFont()
-                font.setStrikeOut(True)  # Перечеркнутый текст для старой цены
-                return font
-                
-        return None
-    
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.headers[section]
-        return None
-
 class ProductListWindow(QWidget):
+    data_updated = Signal()
+    
     def __init__(self, user):
         super().__init__()
         self.user = user
         self.products = []
+        self.current_edit_window = None
         
-        # Установка белого фона и шрифта
-        self.setStyleSheet("""
-            ProductListWindow {
-                background-color: #FFFFFF;
-                font-family: "Times New Roman";
-            }
-        """)
+        # Для отладки
+        user_role = user.role if user else None
+        user_role_lower = user_role.lower() if user_role else None
+        
+        print(f"🎯 ProductListWindow создан для: {user.full_name if user else 'Гость'}")
+        print(f"   Роль (оригинал): {user_role}")
+        print(f"   Роль (нижний регистр): {user_role_lower}")
+        
+        # Проверяем права
+        if user_role_lower in ['менеджер', 'администратор']:
+            print("   🛠️ Пользователь имеет права менеджера/администратора")
+            self.has_management_rights = True
+        else:
+            print("   👀 Пользователь не имеет прав управления")
+            self.has_management_rights = False
         
         self.setup_ui()
         self.load_products()
-        
+    
     def setup_ui(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
         
-        # Панель поиска и фильтрации - ТОЛЬКО для менеджера и администратора
-        if self.user and self.user.role in ['менеджер', 'администратор']:
-            search_panel = self.create_search_panel()
-            layout.addWidget(search_panel)
+        # ЗАГОЛОВОК
+        title_label = QLabel("КАТАЛОГ ТОВАРОВ")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 24px; 
+                font-weight: bold; 
+                color: #2E8B57;
+                padding: 10px;
+                background-color: #F0FFF0;
+                border-radius: 8px;
+                border: 2px solid #2E8B57;
+            }
+        """)
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
         
-        # Scroll area для карточек товаров
-        self.scroll_area = QScrollArea()
-        self.scroll_widget = QWidget()
-        self.scroll_layout = QVBoxLayout(self.scroll_widget)
-        self.scroll_area.setWidget(self.scroll_widget)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        # ПАНЕЛЬ УПРАВЛЕНИЯ: только для менеджера и администратора
+        if self.has_management_rights:
+            print("   🛠️ Создаем панель управления...")
+            control_panel = self.create_control_panel()
+            layout.addWidget(control_panel)
+        else:
+            print("   👀 Панель управления не создается")
         
-        layout.addWidget(self.scroll_area)
+        # Контейнер для товаров
+        self.products_container = QWidget()
+        self.products_layout = QVBoxLayout(self.products_container)
+        self.products_layout.setSpacing(15)
+        self.products_layout.setContentsMargins(5, 5, 5, 5)
         
-        # Панель кнопок - ТОЛЬКО для администратора
-        if self.user and self.user.role == 'администратор':
-            button_panel = self.create_button_panel()
-            layout.addWidget(button_panel)
+        # Скроллируемая область
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.products_container)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+        """)
         
+        layout.addWidget(scroll_area, 1)
         self.setLayout(layout)
     
-    def create_search_panel(self):
+    def create_control_panel(self):
+        """Создает панель управления для менеджера и администратора"""
         panel = QFrame()
-        panel.setFrameStyle(QFrame.StyledPanel)
-        layout = QHBoxLayout()
+        panel.setObjectName("controlPanel")
+        panel.setStyleSheet("""
+            QFrame#controlPanel {
+                background-color: #F8FFF8;
+                border: 2px solid #00FA9A;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
         
-        # Поиск
-        search_layout = QVBoxLayout()
-        search_label = QLabel("Поиск:")
+        layout = QGridLayout()
+        layout.setSpacing(15)
+        layout.setColumnStretch(3, 1)
+        
+        # === ПОИСК ===
+        search_label = QLabel("🔍 ПОИСК:")
+        search_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+        
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Поиск по названию, описанию, категории...")
+        self.search_input.setObjectName("searchInput")
+        self.search_input.setPlaceholderText("Введите текст для поиска...")
+        self.search_input.setMinimumHeight(40)
+        self.search_input.setClearButtonEnabled(True)
+        self.search_input.setStyleSheet("""
+            QLineEdit#searchInput {
+                padding: 8px 12px;
+                border: 2px solid #ccc;
+                border-radius: 6px;
+                background-color: white;
+                font-family: "Times New Roman";
+                font-size: 14px;
+            }
+            QLineEdit#searchInput:focus {
+                border: 2px solid #00FA9A;
+                background-color: #F0FFF0;
+            }
+            QLineEdit#searchInput:hover {
+                border: 2px solid #00FA9A;
+            }
+        """)
+        
+        # Подключаем поиск в реальном времени
         self.search_input.textChanged.connect(self.apply_filters)
-        search_layout.addWidget(search_label)
-        search_layout.addWidget(self.search_input)
         
-        # Фильтр по поставщику
-        filter_layout = QVBoxLayout()
-        filter_label = QLabel("Поставщик:")
-        self.supplier_combo = QComboBox()
-        self.supplier_combo.currentTextChanged.connect(self.apply_filters)
-        filter_layout.addWidget(filter_label)
-        filter_layout.addWidget(self.supplier_combo)
+        # === ФИЛЬТР ПО ПОСТАВЩИКУ ===
+        filter_label = QLabel("🏭 ФИЛЬТР:")
+        filter_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
         
-        # Сортировка
-        sort_layout = QVBoxLayout()
-        sort_label = QLabel("Сортировка:")
+        self.supplier_filter = QComboBox()
+        self.supplier_filter.setObjectName("supplierFilter")
+        self.supplier_filter.setMinimumHeight(40)
+        self.supplier_filter.setStyleSheet("""
+            QComboBox#supplierFilter {
+                padding: 8px;
+                border: 2px solid #ccc;
+                border-radius: 6px;
+                background-color: white;
+                font-family: "Times New Roman";
+                font-size: 14px;
+            }
+            QComboBox#supplierFilter:hover {
+                border: 2px solid #00FA9A;
+            }
+            QComboBox#supplierFilter:focus {
+                border: 2px solid #00FA9A;
+            }
+        """)
+        self.supplier_filter.currentTextChanged.connect(self.apply_filters)
+        
+        # === СОРТИРОВКА ===
+        sort_label = QLabel("📊 СОРТИРОВКА:")
+        sort_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
+        
         self.sort_combo = QComboBox()
+        self.sort_combo.setObjectName("sortCombo")
+        self.sort_combo.setMinimumHeight(40)
         self.sort_combo.addItems([
             "По названию (А-Я)",
-            "По названию (Я-А)", 
-            "По количеству (возр.)",
-            "По количеству (убыв.)",
-            "По цене (возр.)",
-            "По цене (убыв.)"
+            "По названию (Я-А)",
+            "По цене (возрастание)",
+            "По цене (убывание)",
+            "По количеству (возрастание)",
+            "По количеству (убывание)"
         ])
+        self.sort_combo.setStyleSheet("""
+            QComboBox#sortCombo {
+                padding: 8px;
+                border: 2px solid #ccc;
+                border-radius: 6px;
+                background-color: white;
+                font-family: "Times New Roman";
+                font-size: 14px;
+            }
+            QComboBox#sortCombo:hover {
+                border: 2px solid #00FA9A;
+            }
+            QComboBox#sortCombo:focus {
+                border: 2px solid #00FA9A;
+            }
+        """)
         self.sort_combo.currentTextChanged.connect(self.apply_filters)
-        sort_layout.addWidget(sort_label)
-        sort_layout.addWidget(self.sort_combo)
         
-        layout.addLayout(search_layout, 4)
-        layout.addLayout(filter_layout, 2)
-        layout.addLayout(sort_layout, 2)
+        # === КНОПКИ ДЛЯ АДМИНИСТРАТОРА ===
+        user_role = self.user.role.lower() if self.user else None
+        if user_role == 'администратор':
+            print("   👑 Добавляем кнопки для администратора")
+            
+            btn_layout = QHBoxLayout()
+            btn_layout.setSpacing(10)
+            
+            self.add_btn = QPushButton("➕ ДОБАВИТЬ ТОВАР")
+            self.add_btn.setMinimumHeight(40)
+            self.add_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #2E8B57;
+                    color: white;
+                    font-weight: bold;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    border: 2px solid #2E8B57;
+                    font-family: "Times New Roman";
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background-color: #3CB371;
+                    border-color: #3CB371;
+                }
+                QPushButton:pressed {
+                    background-color: #228B22;
+                    border-color: #228B22;
+                }
+            """)
+            self.add_btn.clicked.connect(self.add_product)
+            
+            btn_layout.addWidget(self.add_btn)
+            btn_layout.addStretch()
+        
+        # === РАЗМЕЩЕНИЕ ЭЛЕМЕНТОВ ===
+        layout.addWidget(search_label, 0, 0)
+        layout.addWidget(self.search_input, 0, 1, 1, 3)
+        layout.addWidget(filter_label, 1, 0)
+        layout.addWidget(self.supplier_filter, 1, 1)
+        layout.addWidget(sort_label, 1, 2)
+        layout.addWidget(self.sort_combo, 1, 3)
+        
+        if user_role == 'администратор':
+            layout.addLayout(btn_layout, 2, 0, 1, 4)
+        
+        # Загрузка поставщиков
+        self.load_suppliers()
         
         panel.setLayout(layout)
         return panel
     
-    def create_button_panel(self):
-        panel = QFrame()
-        layout = QHBoxLayout()
-        
-        self.add_btn = QPushButton("Добавить товар")
-        self.edit_btn = QPushButton("Редактировать товар")
-        self.delete_btn = QPushButton("Удалить товар")
-        
-        self.add_btn.clicked.connect(self.add_product)
-        self.edit_btn.clicked.connect(self.edit_selected_product)
-        self.delete_btn.clicked.connect(self.delete_product)
-        
-        layout.addWidget(self.add_btn)
-        layout.addWidget(self.edit_btn)
-        layout.addWidget(self.delete_btn)
-        layout.addStretch()
-        
-        panel.setLayout(layout)
-        return panel
+    def load_suppliers(self):
+        """Загрузка списка поставщиков"""
+        if self.has_management_rights:
+            print("   📦 Загружаем список поставщиков...")
+            suppliers = ProductService.get_all_suppliers()
+            self.supplier_filter.addItem("Все поставщики")
+            for supplier in suppliers:
+                if supplier and supplier.strip():
+                    self.supplier_filter.addItem(supplier.strip())
+            print(f"   ✅ Загружено поставщиков: {len(suppliers)}")
     
     def load_products(self):
+        """Загрузка всех товаров (для гостя и клиента)"""
+        print("   📥 Загружаем товары...")
         self.products = ProductService.get_all_products()
-        
-        # Очищаем предыдущие карточки
-        for i in reversed(range(self.scroll_layout.count())): 
-            widget = self.scroll_layout.itemAt(i).widget()
-            if widget:
-                widget.setParent(None)
-        
-        # Импортируем здесь, чтобы избежать циклического импорта
-        from views.product_card_widget import ProductCardWidget
-        
-        # Создаем карточки для каждого товара
-        for product in self.products:
-            card = ProductCardWidget(product, self.user)
-            self.scroll_layout.addWidget(card)
-        
-        # Добавляем растягивающий элемент в конец
-        self.scroll_layout.addStretch()
-        
-        # Загружаем поставщиков в комбобокс (для менеджера и администратора)
-        if self.user and self.user.role in ['менеджер', 'администратор']:
-            suppliers = ProductService.get_all_suppliers()
-            self.supplier_combo.clear()
-            self.supplier_combo.addItem("Все поставщики")
-            self.supplier_combo.addItems(suppliers)
+        print(f"   ✅ Загружено товаров: {len(self.products)}")
+        self.display_products()
     
     def apply_filters(self):
-        # Этот метод будет работать только для менеджера и администратора
-        if not self.user or self.user.role not in ['менеджер', 'администратор']:
+        """Применение фильтров в реальном времени"""
+        if not self.has_management_rights:
             return
-            
-        search_text = self.search_input.text()
-        supplier_filter = self.supplier_combo.currentText()
-        if supplier_filter == "Все поставщики":
-            supplier_filter = ""
         
-        sort_map = {
+        # Получаем значения фильтров
+        search_text = self.search_input.text().strip()
+        supplier = self.supplier_filter.currentText()
+        sort_option = self.sort_combo.currentText()
+        
+        print(f"   🔍 Применяем фильтры: поиск='{search_text}', поставщик='{supplier}', сортировка='{sort_option}'")
+        
+        # Преобразуем в параметры для сервиса
+        sort_mapping = {
             "По названию (А-Я)": "name_asc",
-            "По названию (Я-А)": "name_desc", 
-            "По количеству (возр.)": "stock_quantity_asc",
-            "По количеству (убыв.)": "stock_quantity_desc",
-            "По цене (возр.)": "price_asc",
-            "По цене (убыв.)": "price_desc"
+            "По названию (Я-А)": "name_desc",
+            "По цене (возрастание)": "price_asc",
+            "По цене (убывание)": "price_desc",
+            "По количеству (возрастание)": "stock_quantity_asc",
+            "По количеству (убывание)": "stock_quantity_desc"
         }
-        sort_by = sort_map.get(self.sort_combo.currentText(), "name_asc")
         
+        sort_by = sort_mapping.get(sort_option, "name_asc")
+        
+        # Применяем фильтры
         self.products = ProductService.get_products_with_filters(
-            search_text, supplier_filter, sort_by
+            search_text=search_text,
+            supplier_filter=supplier if supplier != "Все поставщики" else "",
+            sort_by=sort_by
         )
         
-        # Обновляем отображение карточек
-        for i in reversed(range(self.scroll_layout.count())): 
-            widget = self.scroll_layout.itemAt(i).widget()
-            if widget:
+        print(f"   ✅ После фильтрации товаров: {len(self.products)}")
+        self.display_products()
+    
+    def display_products(self):
+        """Отображение товаров в виде карточек"""
+        print("   🖼️ Отображаем товары...")
+        
+        # Очищаем контейнер
+        for i in reversed(range(self.products_layout.count())): 
+            widget = self.products_layout.itemAt(i).widget()
+            if widget is not None:
                 widget.setParent(None)
         
-        # Импортируем здесь
-        from views.product_card_widget import ProductCardWidget
+        # Добавляем товары
+        if not self.products:
+            no_products_label = QLabel("ТОВАРЫ НЕ НАЙДЕНЫ")
+            no_products_label.setAlignment(Qt.AlignCenter)
+            no_products_label.setStyleSheet("""
+                QLabel {
+                    font-size: 18px; 
+                    color: #666666;
+                    padding: 40px;
+                    font-family: "Times New Roman";
+                    font-weight: bold;
+                }
+            """)
+            self.products_layout.addWidget(no_products_label)
+            print("   ⚠️ Товары не найдены")
+        else:
+            for product in self.products:
+                card = ProductCardWidget(product, self.user)
+                
+                # Двойной клик для редактирования (только для администратора)
+                user_role = self.user.role.lower() if self.user else None
+                if user_role == 'администратор':
+                    card.mouseDoubleClickEvent = lambda event, p=product: self.edit_product(p)
+                
+                self.products_layout.addWidget(card)
+            
+            print(f"   ✅ Отображено товаров: {len(self.products)}")
         
-        for product in self.products:
-            card = ProductCardWidget(product, self.user)
-            self.scroll_layout.addWidget(card)
-        
-        self.scroll_layout.addStretch()
+        self.products_layout.addStretch()
     
     def add_product(self):
-        if self.user and self.user.role == 'администратор':
-            from views.product_edit_window import ProductEditWindow
-            edit_window = ProductEditWindow(parent=self)
-            edit_window.product_saved.connect(self.load_products)
-            edit_window.show()
+        """Добавление нового товара (только администратор)"""
+        user_role = self.user.role.lower() if self.user else None
+        if user_role == 'администратор':
+            print("   🆕 Открываем окно добавления товара")
+            
+            if self.current_edit_window is not None:
+                QMessageBox.warning(self, "Предупреждение", 
+                                  "Закройте окно редактирования перед созданием нового товара.")
+                return
+            
+            self.current_edit_window = ProductEditWindow(parent=self)
+            self.current_edit_window.product_saved.connect(self.on_product_saved)
+            self.current_edit_window.destroyed.connect(lambda: setattr(self, 'current_edit_window', None))
+            self.current_edit_window.show()
     
-    def edit_selected_product(self):
-        QMessageBox.information(self, "Информация", "Для редактирования используйте форму добавления/редактирования товаров")
+    def edit_product(self, product):
+        """Редактирование товара (только администратор)"""
+        user_role = self.user.role.lower() if self.user else None
+        if user_role == 'администратор':
+            print(f"   ✏️ Редактирование товара: {product.name}")
+            
+            if self.current_edit_window is not None:
+                QMessageBox.warning(self, "Предупреждение", 
+                                  "Закройте окно редактирования перед открытием нового.")
+                return
+            
+            self.current_edit_window = ProductEditWindow(product, parent=self)
+            self.current_edit_window.product_saved.connect(self.on_product_saved)
+            self.current_edit_window.destroyed.connect(lambda: setattr(self, 'current_edit_window', None))
+            self.current_edit_window.show()
     
-    def delete_product(self):
-        if self.user and self.user.role == 'администратор':
-            QMessageBox.information(self, "Информация", "Для удаления товаров используйте форму управления товарами")
+    def on_product_saved(self):
+        """Обновление списка после сохранения"""
+        print("   🔄 Обновляем список после сохранения")
+        if self.has_management_rights:
+            self.apply_filters()
+        else:
+            self.load_products()
+    
+    def keyPressEvent(self, event):
+        """Обработка нажатий клавиш"""
+        if event.key() == Qt.Key_F5:
+            print("   🔄 Обновляем список (F5)")
+            if self.has_management_rights:
+                self.apply_filters()
+            else:
+                self.load_products()
+        elif event.key() == Qt.Key_Escape:
+            user_role = self.user.role.lower() if self.user else None
+            if user_role == 'администратор' and self.current_edit_window:
+                self.current_edit_window.close()

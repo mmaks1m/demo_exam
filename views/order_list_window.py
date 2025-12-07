@@ -71,7 +71,7 @@ class OrderListWindow(QWidget):
         self.setup_table()
         
         # Панель кнопок (для администратора)
-        if self.user and self.user.role == 'администратор':
+        if self.user and self.user.role.lower() == 'администратор':
             button_panel = self.create_button_panel()
             layout.addWidget(button_panel)
         
@@ -91,7 +91,7 @@ class OrderListWindow(QWidget):
         header.setSectionResizeMode(6, QHeaderView.ResizeToContents)  # Пункт выдачи
         
         # Двойной клик для редактирования
-        if self.user and self.user.role in ['менеджер', 'администратор']:
+        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
             self.table_view.doubleClicked.connect(self.edit_order)
     
     def create_button_panel(self):
@@ -120,7 +120,7 @@ class OrderListWindow(QWidget):
         self.table_model.layoutChanged.emit()
     
     def add_order(self):
-        if self.user and self.user.role == 'администратор':
+        if self.user and self.user.role.lower() == 'администратор':
             edit_window = OrderEditWindow(parent=self)
             edit_window.order_saved.connect(self.load_orders)
             edit_window.show()
@@ -133,14 +133,14 @@ class OrderListWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Выберите заказ для редактирования")
     
     def edit_order(self, index):
-        if self.user and self.user.role in ['менеджер', 'администратор']:
+        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
             order = self.orders[index.row()]
             edit_window = OrderEditWindow(order, parent=self)
             edit_window.order_saved.connect(self.load_orders)
             edit_window.show()
     
     def delete_order(self):
-        if self.user and self.user.role == 'администратор':
+        if self.user and self.user.role.lower() == 'администратор':
             selected = self.table_view.selectionModel().selectedRows()
             if not selected:
                 QMessageBox.warning(self, "Ошибка", "Выберите заказ для удаления")
