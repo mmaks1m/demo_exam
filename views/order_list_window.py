@@ -1,224 +1,191 @@
-# views/order_list_window.py - ИСПРАВЛЕНИЕ ЦВЕТА ТЕКСТА В ТАБЛИЦЕ
+# views/order_list_window.py - ПЕРЕДЕЛАННЫЙ С КАРТОЧКАМИ
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QTableView, QPushButton, QMessageBox, QFrame,
-                             QHeaderView)
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
-from PySide6.QtGui import QColor, QBrush, QFont
+                             QPushButton, QMessageBox, QFrame, QScrollArea)
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont
 
 from order_service import OrderService
 from views.order_edit_window import OrderEditWindow
-
-class OrderTableModel(QAbstractTableModel):
-    def __init__(self, orders=None):
-        super().__init__()
-        self.orders = orders or []
-        self.headers = ["ID", "Артикул", "Статус", "Пользователь", "Дата заказа", "Дата доставки", "Пункт выдачи"]
-        
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.orders)
-    
-    def columnCount(self, parent=QModelIndex()):
-        return len(self.headers)
-    
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid() or not (0 <= index.row() < len(self.orders)):
-            return None
-            
-        order = self.orders[index.row()]
-        col = index.column()
-        
-        if role == Qt.DisplayRole:
-            if col == 0: return order.id
-            elif col == 1: return order.order_article if hasattr(order, 'order_article') else f"ORD-{order.id}"
-            elif col == 2: return order.status
-            elif col == 3: return order.user.full_name if order.user else "Неизвестно"
-            elif col == 4: return order.order_date.strftime("%d.%m.%Y %H:%M") if order.order_date else ""
-            elif col == 5: return order.delivery_date.strftime("%d.%m.%Y %H:%M") if order.delivery_date else ""
-            elif col == 6: return order.pickup_point.address if order.pickup_point else "Не указан"
-            
-        elif role == Qt.BackgroundRole:
-            # Подсветка статусов
-            status = order.status.lower() if order.status else ""
-            if status in ['выполнен', 'доставлен']:
-                return QBrush(QColor("#d4edda"))
-            elif status in ['отменен', 'отменён']:
-                return QBrush(QColor("#f8d7da"))
-            elif status in ['в обработке', 'обработка']:
-                return QBrush(QColor("#fff3cd"))
-                
-        elif role == Qt.ForegroundRole:  # ДОБАВЛЯЕМ: цвет текста
-            return QBrush(QColor("#000000"))  # ЧЕРНЫЙ ТЕКСТ
-        
-        elif role == Qt.FontRole:
-            font = QFont("Times New Roman", 10)
-            return font
-            
-        return None
-    
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.headers[section]
-        elif role == Qt.FontRole:
-            font = QFont("Times New Roman", 10, QFont.Bold)
-            return font
-        elif role == Qt.ForegroundRole:  # ДОБАВЛЯЕМ: цвет заголовков
-            return QBrush(QColor("#000000"))
-        return None
+from views.order_card_widget import OrderCardWidget
 
 class OrderListWindow(QWidget):
+    """Окно списка заказов в виде карточек"""
+    data_updated = Signal()
+    
     def __init__(self, user):
         super().__init__()
         self.user = user
         self.orders = []
+        self.current_edit_window = None  # Чтобы предотвратить множественное редактирование
         self.setup_ui()
         self.load_orders()
+        
+        print(f"✅ OrderListWindow создан для: {user.full_name if user else 'Гость'}")
         
     def setup_ui(self):
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
         
         # Заголовок
         title_label = QLabel("Управление заказами")
         title_label.setStyleSheet("""
-            font-size: 16px; 
+            font-size: 18px; 
             font-weight: bold; 
-            color: #2E8B57; 
+            color: #2E8B57;
             margin: 10px;
         """)
-        
-        # Таблица заказов
-        self.setup_table()
+        title_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_label)
         
         # Панель кнопок (для администратора)
         if self.user and self.user.role.lower() == 'администратор':
             button_panel = self.create_button_panel()
             layout.addWidget(button_panel)
         
-        layout.addWidget(title_label)
-        layout.addWidget(self.table_view)
+        # Контейнер для заказов
+        self.orders_container = QWidget()
+        self.orders_layout = QVBoxLayout(self.orders_container)
+        self.orders_layout.setSpacing(10)
+        self.orders_layout.setContentsMargins(5, 5, 5, 5)
         
-        self.setLayout(layout)
-    
-    def setup_table(self):
-        self.table_view = QTableView()
-        self.table_model = OrderTableModel()
-        self.table_view.setModel(self.table_model)
-        
-        # Настройка внешнего вида таблицы
-        self.table_view.setStyleSheet("""
-            QTableView {
-                background-color: white;
-                border: 1px solid #cccccc;
-                gridline-color: #cccccc;
-                alternate-background-color: #f8f9fa;
-                selection-background-color: #00FA9A;
-                selection-color: #000000;
-            }
-            QTableView::item {
-                padding: 5px;
-                border-right: 1px solid #cccccc;
-                border-bottom: 1px solid #cccccc;
-            }
-            QHeaderView::section {
-                background-color: #7FFF00;
-                color: #000000;
-                padding: 8px;
-                border: 1px solid #5CB800;
-                font-weight: bold;
-            }
-            QHeaderView::section:checked {
-                background-color: #00FA9A;
+        # Скроллируемая область
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.orders_container)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
             }
         """)
         
-        header = self.table_view.horizontalHeader()
-        header.setSectionResizeMode(3, QHeaderView.Stretch)
-        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
-        
-        # Устанавливаем высоту строк
-        self.table_view.verticalHeader().setDefaultSectionSize(35)
-        
-        # Двойной клик для редактирования
-        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
-            self.table_view.doubleClicked.connect(self.edit_order)
+        layout.addWidget(scroll_area, 1)
+        self.setLayout(layout)
     
     def create_button_panel(self):
+        """Создает панель управления для администратора"""
         panel = QFrame()
+        panel.setStyleSheet("""
+            QFrame {
+                background-color: #F8FFF8;
+                border: 2px solid #00FA9A;
+                border-radius: 8px;
+                padding: 10px;
+            }
+        """)
+        
         layout = QHBoxLayout()
         
-        self.add_btn = QPushButton("Добавить заказ")
-        self.edit_btn = QPushButton("Редактировать заказ")
-        self.delete_btn = QPushButton("Удалить заказ")
-        
-        # Стиль кнопок
-        button_style = """
+        add_btn = QPushButton("➕ Добавить заказ")
+        add_btn.setMinimumHeight(40)
+        add_btn.setStyleSheet("""
             QPushButton {
-                background-color: #7FFF00;
-                color: #000000;
-                border: 2px solid #5CB800;
-                border-radius: 4px;
-                padding: 8px 15px;
+                background-color: #2E8B57;
+                color: white;
                 font-weight: bold;
+                padding: 8px 15px;
+                border-radius: 6px;
+                border: 2px solid #2E8B57;
+                font-family: "Times New Roman";
+                font-size: 14px;
             }
             QPushButton:hover {
-                background-color: #00FA9A;
-                border-color: #00E58B;
+                background-color: #3CB371;
+                border-color: #3CB371;
             }
-            QPushButton:pressed {
-                background-color: #00D07A;
-                border-color: #00D07A;
-            }
-        """
+        """)
+        add_btn.clicked.connect(self.add_order)
         
-        self.add_btn.setStyleSheet(button_style)
-        self.edit_btn.setStyleSheet(button_style)
-        self.delete_btn.setStyleSheet(button_style)
-        
-        self.add_btn.clicked.connect(self.add_order)
-        self.edit_btn.clicked.connect(self.edit_selected_order)
-        self.delete_btn.clicked.connect(self.delete_order)
-        
-        layout.addWidget(self.add_btn)
-        layout.addWidget(self.edit_btn)
-        layout.addWidget(self.delete_btn)
+        layout.addWidget(add_btn)
         layout.addStretch()
         
         panel.setLayout(layout)
         return panel
     
     def load_orders(self):
+        """Загрузка всех заказов"""
+        print("   📥 Загружаем заказы...")
         self.orders = OrderService.get_all_orders()
-        self.table_model.orders = self.orders
-        self.table_model.layoutChanged.emit()
+        print(f"   ✅ Загружено заказов: {len(self.orders)}")
+        self.display_orders()
+    
+    def display_orders(self):
+        """Отображение заказов в виде карточек"""
+        # Очищаем контейнер
+        for i in reversed(range(self.orders_layout.count())): 
+            widget = self.orders_layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
+        
+        # Добавляем заказы
+        if not self.orders:
+            no_orders_label = QLabel("ЗАКАЗЫ НЕ НАЙДЕНЫ")
+            no_orders_label.setAlignment(Qt.AlignCenter)
+            no_orders_label.setStyleSheet("""
+                QLabel {
+                    font-size: 18px; 
+                    color: #666666;
+                    padding: 40px;
+                    font-family: "Times New Roman";
+                    font-weight: bold;
+                }
+            """)
+            self.orders_layout.addWidget(no_orders_label)
+            print("   ⚠️ Заказы не найдены")
+        else:
+            for order in self.orders:
+                card = OrderCardWidget(order, self.user)
+                
+                # Подключаем сигналы (для администратора)
+                if self.user and self.user.role.lower() == 'администратор':
+                    card.edit_requested.connect(self.edit_order)
+                    card.delete_requested.connect(self.delete_order)
+                
+                self.orders_layout.addWidget(card)
+            
+            print(f"   ✅ Отображено заказов: {len(self.orders)}")
+        
+        self.orders_layout.addStretch()
     
     def add_order(self):
+        """Добавление нового заказа (только администратор)"""
         if self.user and self.user.role.lower() == 'администратор':
-            edit_window = OrderEditWindow(parent=self)
-            edit_window.order_saved.connect(self.load_orders)
-            edit_window.show()
-    
-    def edit_selected_order(self):
-        selected = self.table_view.selectionModel().selectedRows()
-        if selected:
-            self.edit_order(selected[0])
-        else:
-            QMessageBox.warning(self, "Ошибка", "Выберите заказ для редактирования")
-    
-    def edit_order(self, index):
-        if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
-            order = self.orders[index.row()]
-            edit_window = OrderEditWindow(order, parent=self)
-            edit_window.order_saved.connect(self.load_orders)
-            edit_window.show()
-    
-    def delete_order(self):
-        if self.user and self.user.role.lower() == 'администратор':
-            selected = self.table_view.selectionModel().selectedRows()
-            if not selected:
-                QMessageBox.warning(self, "Ошибка", "Выберите заказ для удаления")
+            print("   🆕 Открываем окно добавления заказа")
+            
+            # Проверяем, нет ли уже открытого окна редактирования
+            if self.current_edit_window is not None:
+                QMessageBox.warning(self, "Предупреждение", 
+                                  "Закройте окно редактирования перед созданием нового заказа.")
                 return
             
-            order = self.orders[selected[0].row()]
+            self.current_edit_window = OrderEditWindow(parent=self)
+            self.current_edit_window.order_saved.connect(self.on_order_saved)
+            self.current_edit_window.destroyed.connect(lambda: setattr(self, 'current_edit_window', None))
+            self.current_edit_window.show()
+    
+    def edit_order(self, order):
+        """Редактирование заказа (только администратор)"""
+        if self.user and self.user.role.lower() == 'администратор':
+            print(f"   ✏️ Редактирование заказа: {order.id}")
+            
+            # Проверяем, нет ли уже открытого окна редактирования
+            if self.current_edit_window is not None:
+                QMessageBox.warning(self, "Предупреждение", 
+                                  "Закройте окно редактирования перед открытием нового.")
+                return
+            
+            self.current_edit_window = OrderEditWindow(order, parent=self)
+            self.current_edit_window.order_saved.connect(self.on_order_saved)
+            self.current_edit_window.destroyed.connect(lambda: setattr(self, 'current_edit_window', None))
+            self.current_edit_window.show()
+    
+    def delete_order(self, order):
+        """Удаление заказа (только администратор)"""
+        if self.user and self.user.role.lower() == 'администратор':
+            print(f"   🗑️ Удаление заказа: {order.id}")
+            
             reply = QMessageBox.question(
                 self, 
                 "Подтверждение удаления",
@@ -230,6 +197,11 @@ class OrderListWindow(QWidget):
                 success, message = OrderService.delete_order(order.id)
                 if success:
                     QMessageBox.information(self, "Успех", message)
-                    self.load_orders()
+                    self.load_orders()  # Обновляем список
                 else:
                     QMessageBox.critical(self, "Ошибка", message)
+    
+    def on_order_saved(self):
+        """Обновление списка после сохранения"""
+        print("   🔄 Обновляем список заказов после сохранения")
+        self.load_orders()

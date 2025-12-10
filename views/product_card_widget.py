@@ -1,10 +1,11 @@
 # views/product_card_widget.py
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QFrame, QSizePolicy
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QFrame, QSizePolicy, QMessageBox, QPushButton
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap, QFont, QIcon
 import os
 
 class ProductCardWidget(QWidget):
+    delete_requested = Signal(object)
     def __init__(self, product, user):
         super().__init__()
         self.product = product
@@ -18,7 +19,6 @@ class ProductCardWidget(QWidget):
         card_frame.setLineWidth(1)
         card_frame.setFixedHeight(230)
         
-        # Устанавливаем иконку приложения для карточки
         if os.path.exists("resources/images/icon.png"):
             self.setWindowIcon(QIcon("resources/images/icon.png"))
         
@@ -41,7 +41,7 @@ class ProductCardWidget(QWidget):
         # Центральная часть: Информация
         self.setup_info_section(main_layout)
         
-        # Правая часть: Скидка
+        # Правая часть: Скидка и кнопка удаления
         self.setup_discount_section(main_layout)
         
         # Основной layout для всего виджета
@@ -53,7 +53,7 @@ class ProductCardWidget(QWidget):
         if discount > 15:
             card_frame.setStyleSheet("""
                 QFrame {
-                    background-color: #2E8B57;
+                    background-color: #7FFF00;
                     border: 1px solid white;
                     border-radius: 5px;
                     margin: 5px;
@@ -67,7 +67,6 @@ class ProductCardWidget(QWidget):
                         color: white;
                         font-family: "Times New Roman";
                         background-color: transparent;
-                        border: 1px solid white;
                         border: none;
                     }
                 """)
@@ -216,14 +215,15 @@ class ProductCardWidget(QWidget):
         main_layout.addWidget(center_frame)
     
     def setup_discount_section(self, main_layout):
-        """Правая часть: Скидка"""
         right_frame = QFrame()
         right_frame.setFixedSize(110, 190)
         right_layout = QVBoxLayout(right_frame)
         right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(10)
         
         discount = self.product.discount or 0
         
+        # Скидка
         discount_label = QLabel(f"<div style='font-size: 32px; font-weight: bold; text-align: center;'>{discount}%</div>")
         discount_label.setAlignment(Qt.AlignCenter)
         discount_label.setMinimumHeight(70)
@@ -234,9 +234,69 @@ class ProductCardWidget(QWidget):
         discount_text_label.setMinimumHeight(50)
         discount_text_label.setStyleSheet("color: #000000; border: none; background-color: transparent;")
         
+        # Кнопка удаления (ТОЛЬКО для администратора)
+        if self.user and self.user.role.lower() == 'администратор':
+            delete_btn = QPushButton("Удалить")
+            delete_btn.setMinimumHeight(30)
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #dc3545;
+                    color: white;
+                    font-weight: bold;
+                    border: 2px solid #dc3545;
+                    border-radius: 4px;
+                    padding: 5px;
+                    font-family: "Times New Roman";
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #c82333;
+                    border-color: #c82333;
+                }
+                QPushButton:pressed {
+                    background-color: #bd2130;
+                    border-color: #bd2130;
+                }
+                QPushButton:disabled {
+                    background-color: #6c757d;
+                    border-color: #6c757d;
+                }
+            """)
+            
+            # Проверяем, можно ли удалить товар
+            from product_service import ProductService
+            can_delete = ProductService.can_delete_product(self.product.article)
+            if not can_delete:
+                delete_btn.setEnabled(False)
+                delete_btn.setToolTip("Товар присутствует в заказе, удаление невозможно")
+            
+            delete_btn.clicked.connect(self.delete_product)
+            right_layout.addWidget(delete_btn)
+        
         right_layout.addStretch()
         right_layout.addWidget(discount_label)
         right_layout.addWidget(discount_text_label)
         right_layout.addStretch()
         
         main_layout.addWidget(right_frame)
+    
+    def delete_product(self):
+        """Обработчик удаления товара"""
+        from product_service import ProductService
+        
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение удаления",
+            f"Вы уверены, что хотите удалить товар:\n{self.product.name} (арт. {self.product.article})?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            success, message = ProductService.delete_product(self.product.article)
+            if success:
+                QMessageBox.information(self, "Успех", message)
+                # Испускаем сигнал для обновления списка
+                self.delete_requested.emit(self.product)
+            else:
+                QMessageBox.critical(self, "Ошибка", message)

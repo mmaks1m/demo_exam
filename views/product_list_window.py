@@ -48,11 +48,10 @@ class ProductListWindow(QWidget):
             QLabel {
                 font-size: 24px; 
                 font-weight: bold; 
-                color: #2E8B57;
+                color: black;
                 padding: 10px;
-                background-color: #F0FFF0;
                 border-radius: 8px;
-                border: 2px solid #2E8B57;
+                border: 2px solid #7FFF00;
             }
         """)
         title_label.setAlignment(Qt.AlignCenter)
@@ -63,6 +62,7 @@ class ProductListWindow(QWidget):
             print("   🛠️ Создаем панель управления...")
             control_panel = self.create_control_panel()
             layout.addWidget(control_panel)
+            self.check_signals()
         else:
             print("   👀 Панель управления не создается")
         
@@ -94,9 +94,10 @@ class ProductListWindow(QWidget):
         panel.setStyleSheet("""
             QFrame#controlPanel {
                 background-color: #F8FFF8;
-                border: 2px solid #00FA9A;
+                border: 2px solid #7FFF00;
                 border-radius: 8px;
                 padding: 15px;
+                height: 80px
             }
         """)
         
@@ -107,81 +108,27 @@ class ProductListWindow(QWidget):
         # === ПОИСК ===
         search_label = QLabel("ПОИСК:")
         search_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
-        search_label.setStyleSheet("color: #000000;")  # Добавляем черный цвет
+        search_label.setStyleSheet("color: #000000;")
         
         self.search_input = QLineEdit()
         self.search_input.setObjectName("searchInput")
         self.search_input.setPlaceholderText("Введите текст для поиска...")
         self.search_input.setMinimumHeight(40)
         self.search_input.setClearButtonEnabled(True)
-        self.search_input.setStyleSheet("""
-            QLineEdit#searchInput {
-                padding: 8px 12px;
-                border: 2px solid #ccc;
-                border-radius: 6px;
-                background-color: white;
-                font-family: "Times New Roman";
-                font-size: 14px;
-                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ */
-            }
-            QLineEdit#searchInput:focus {
-                border: 2px solid #00FA9A;
-                background-color: #F0FFF0;
-            }
-            QLineEdit#searchInput:hover {
-                border: 2px solid #00FA9A;
-            }
-            QLineEdit#searchInput::placeholder {
-                color: #666666;  /* ТЕМНО-СЕРЫЙ ДЛЯ ПЛЕЙСХОЛДЕРА */
-            }
-        """)
         
         # === ФИЛЬТР ПО ПОСТАВЩИКУ ===
         filter_label = QLabel("ФИЛЬТР:")
         filter_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
-        filter_label.setStyleSheet("color: #000000;")  # Добавляем черный цвет
+        filter_label.setStyleSheet("color: #000000;")
         
         self.supplier_filter = QComboBox()
         self.supplier_filter.setObjectName("supplierFilter")
         self.supplier_filter.setMinimumHeight(40)
-        self.supplier_filter.setStyleSheet("""
-            QComboBox#supplierFilter {
-                padding: 8px;
-                border: 2px solid #ccc;
-                border-radius: 6px;
-                background-color: white;
-                font-family: "Times New Roman";
-                font-size: 14px;
-                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ */
-            }
-            QComboBox#supplierFilter:hover {
-                border: 2px solid #00FA9A;
-            }
-            QComboBox#supplierFilter:focus {
-                border: 2px solid #00FA9A;
-            }
-            QComboBox#supplierFilter::drop-down {
-                border: none;
-            }
-            QComboBox#supplierFilter QAbstractItemView {
-                background-color: white;
-                border: 1px solid #ccc;
-                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ В ВЫПАДАЮЩЕМ СПИСКЕ */
-            }
-            QComboBox#supplierFilter QAbstractItemView::item:hover {
-                background-color: #00FA9A;
-                color: #000000;
-            }
-            QComboBox#supplierFilter QAbstractItemView::item:selected {
-                background-color: #7FFF00;
-                color: #000000;
-            }
-        """)
         
         # === СОРТИРОВКА ===
         sort_label = QLabel("СОРТИРОВКА:")
         sort_label.setFont(QFont("Times New Roman", 10, QFont.Bold))
-        sort_label.setStyleSheet("color: #000000;")  # Добавляем черный цвет
+        sort_label.setStyleSheet("color: #000000;")
         
         self.sort_combo = QComboBox()
         self.sort_combo.setObjectName("sortCombo")
@@ -194,46 +141,105 @@ class ProductListWindow(QWidget):
             "По количеству (возрастание)",
             "По количеству (убывание)"
         ])
-        self.sort_combo.setStyleSheet("""
-            QComboBox#sortCombo {
+        
+        # === КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: СТИЛИ ДЛЯ КОМБОБОКСОВ ===
+        combo_box_style = """
+            QComboBox {
                 padding: 8px;
                 border: 2px solid #ccc;
                 border-radius: 6px;
                 background-color: white;
                 font-family: "Times New Roman";
                 font-size: 14px;
-                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ */
+                color: #000000;  /* ЧЕРНЫЙ ТЕКСТ В ОСНОВНОМ ПОЛЕ */
             }
-            QComboBox#sortCombo:hover {
+            QComboBox:hover {
                 border: 2px solid #00FA9A;
-            }
-            QComboBox#sortCombo:focus {
-                border: 2px solid #00FA9A;
-            }
-            QComboBox#sortCombo::drop-down {
-                border: none;
-            }
-            QComboBox#sortCombo QAbstractItemView {
                 background-color: white;
-                border: 1px solid #ccc;
+            }
+            QComboBox:focus {
+                border: 2px solid #00FA9A;
+                background-color: white;
+            }
+            /* Стиль для стрелки */
+            QComboBox::drop-down {
+                border: none;
+                width: 30px;
+            }
+            QComboBox::down-arrow {
+                image: url(none);
+                border-left: 1px solid #ccc;
+                padding-left: 5px;
+            }
+            /* Стиль для выпадающего списка */
+            QComboBox QAbstractItemView {
+                border: none;
+                border-radius: 6px;
+                background-color: white;
+                selection-background-color: #00FA9A;
+                selection-color: #000000;
+                padding: 5px;
+                font-family: "Times New Roman";
+                font-size: 14px;
+                outline: none;
+            }
+            /* Стиль для элементов в выпадающем списке */
+            QComboBox QAbstractItemView::item {
+                padding: 8px;
                 color: #000000;  /* ЧЕРНЫЙ ТЕКСТ В ВЫПАДАЮЩЕМ СПИСКЕ */
+                border-radius: 3px;
+                outline: none;
+                border: none;
+                margin: 2px;
             }
-            QComboBox#sortCombo QAbstractItemView::item:hover {
+            QComboBox QAbstractItemView::item:hover {
                 background-color: #00FA9A;
+                outline: none;
+                border: none;
                 color: #000000;
             }
-            QComboBox#sortCombo QAbstractItemView::item:selected {
-                background-color: #7FFF00;
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #00FA9A; 
+                outline: none;
+                border: none;
                 color: #000000;
             }
-        """)
+        """
+        
+        line_edit_style = """
+            QLineEdit {
+                padding: 8px 12px;
+                border: 2px solid #ccc;
+                border-radius: 6px;
+                background-color: white;
+                font-family: "Times New Roman";
+                font-size: 14px;
+                color: #000000;
+            }
+            QLineEdit:focus {
+                border: 2px solid #00FA9A;
+                background-color: #F0FFF0;
+            }
+            QLineEdit:hover {
+                border: 2px solid #00FA9A;
+            }
+            QLineEdit::placeholder {
+                color: #666666;
+            }
+        """
+        
+        self.search_input.setStyleSheet(line_edit_style)
+        self.supplier_filter.setStyleSheet(combo_box_style)
+        self.sort_combo.setStyleSheet(combo_box_style)
+        
+        # === ПОДКЛЮЧАЕМ СИГНАЛЫ ===
+        self.search_input.textChanged.connect(self.apply_filters)
+        self.supplier_filter.currentTextChanged.connect(self.apply_filters)
         self.sort_combo.currentTextChanged.connect(self.apply_filters)
         
         # === КНОПКИ ДЛЯ АДМИНИСТРАТОРА ===
         user_role = self.user.role.lower() if self.user else None
         if user_role == 'администратор':
-            print("   👑 Добавляем кнопки для администратора")
-            
             btn_layout = QHBoxLayout()
             btn_layout.setSpacing(10)
             
@@ -301,10 +307,11 @@ class ProductListWindow(QWidget):
     
     def apply_filters(self):
         """Применение фильтров в реальном времени"""
+        print(f"🎯 apply_filters вызван! has_management_rights={self.has_management_rights}")
         if not self.has_management_rights:
             return
-        
-        # Получаем значения фильтров
+    
+    # Получаем значения фильтров
         search_text = self.search_input.text().strip()
         supplier = self.supplier_filter.currentText()
         sort_option = self.sort_combo.currentText()
@@ -323,7 +330,7 @@ class ProductListWindow(QWidget):
         
         sort_by = sort_mapping.get(sort_option, "name_asc")
         
-        # Применяем фильтры
+        # Применяем фильтры - ОБЯЗАТЕЛЬНО для любых изменений
         self.products = ProductService.get_products_with_filters(
             search_text=search_text,
             supplier_filter=supplier if supplier != "Все поставщики" else "",
@@ -362,9 +369,12 @@ class ProductListWindow(QWidget):
             for product in self.products:
                 card = ProductCardWidget(product, self.user)
                 
-                # Двойной клик для редактирования (только для администратора)
-                user_role = self.user.role.lower() if self.user else None
-                if user_role == 'администратор':
+                # Подключаем сигнал удаления
+                if self.user and self.user.role.lower() == 'администратор':
+                    card.delete_requested.connect(self.on_product_deleted)
+                
+                # Двойной клик для редактирования
+                if self.user and self.user.role.lower() == 'администратор':
                     card.mouseDoubleClickEvent = lambda event, p=product: self.edit_product(p)
                 
                 self.products_layout.addWidget(card)
@@ -425,3 +435,50 @@ class ProductListWindow(QWidget):
             user_role = self.user.role.lower() if self.user else None
             if user_role == 'администратор' and self.current_edit_window:
                 self.current_edit_window.close()
+    
+    def check_signals(self):
+        """Проверяет, подключены ли сигналы"""
+        print("🔍 Проверка сигналов:")
+        
+        # Проверяем, существуют ли виджеты
+        if not hasattr(self, 'search_input') or not self.search_input:
+            print("   ❌ search_input не существует")
+            return
+        
+        if not hasattr(self, 'supplier_filter') or not self.supplier_filter:
+            print("   ❌ supplier_filter не существует")
+            return
+        
+        if not hasattr(self, 'sort_combo') or not self.sort_combo:
+            print("   ❌ sort_combo не существует")
+            return
+        
+        try:
+            # В PySide6 receivers принимает строку с именем сигнала
+            # Для textChanged сигнала
+            search_receivers = self.search_input.receivers("textChanged")
+            print(f"   search_input.textChanged receivers: {search_receivers}")
+        except Exception as e:
+            print(f"   Ошибка проверки search_input: {e}")
+        
+        try:
+            # Для currentTextChanged сигнала QComboBox
+            supplier_receivers = self.supplier_filter.receivers("currentTextChanged")
+            print(f"   supplier_filter.currentTextChanged receivers: {supplier_receivers}")
+        except Exception as e:
+            print(f"   Ошибка проверки supplier_filter: {e}")
+        
+        try:
+            sort_receivers = self.sort_combo.receivers("currentTextChanged")
+            print(f"   sort_combo.currentTextChanged receivers: {sort_receivers}")
+        except Exception as e:
+            print(f"   Ошибка проверки sort_combo: {e}")
+    
+    def on_product_deleted(self, product):
+        """Обработчик удаления товара"""
+        print(f"   🗑️ Товар удален: {product.name}")
+        # Обновляем список
+        if self.has_management_rights:
+            self.apply_filters()
+        else:
+            self.load_products()

@@ -1,62 +1,144 @@
-from sqlalchemy.orm import Session
+# order_service.py - ИСПРАВЛЕНИЕ ДЛЯ ЗАГРУЗКИ ВСЕХ СВЯЗАННЫХ ДАННЫХ
+from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import Order, OrderItem, User, PickupPoint, Product
 
 class OrderService:
     @staticmethod
     def get_all_orders():
-        """Получение всех заказов с связанными данными"""
+        """Получение всех заказов с связанными данными (используем joinedload)"""
         db: Session = next(get_db())
         try:
-            orders = db.query(Order).join(User).join(PickupPoint).all()
+            # Используем joinedload для загрузки всех связанных данных
+            orders = db.query(Order)\
+                .options(
+                    joinedload(Order.user),
+                    joinedload(Order.pickup_point),
+                    joinedload(Order.order_items).joinedload(OrderItem.product)
+                )\
+                .order_by(Order.order_date.desc())\
+                .all()
             return orders
         except Exception as e:
-            print(f"Ошибка при получении заказов: {e}")
+            print(f"❌ Ошибка при получении заказов: {e}")
+            import traceback
+            traceback.print_exc()
             return []
         finally:
             db.close()
     
     @staticmethod
     def get_order_by_id(order_id: int):
-        """Получение заказа по ID"""
+        """Получение заказа по ID со всеми связанными данными"""
         db: Session = next(get_db())
         try:
-            return db.query(Order).filter(Order.id == order_id).first()
+            order = db.query(Order)\
+                .options(
+                    joinedload(Order.user),
+                    joinedload(Order.pickup_point),
+                    joinedload(Order.order_items).joinedload(OrderItem.product)
+                )\
+                .filter(Order.id == order_id)\
+                .first()
+            return order
         finally:
             db.close()
     
     @staticmethod
     def create_order(order_data: dict):
-        """Создание нового заказа"""
+        """Создание нового заказа с обработкой адреса"""
         db: Session = next(get_db())
         try:
+            # Обрабатываем адрес пункта выдачи
+            pickup_point_address = order_data.pop('pickup_point_address', None)
+            pickup_point_id = order_data.get('pickup_point_id', None)
+            
+            if pickup_point_address and not pickup_point_id:
+                # Создаем новый пункт выдачи или находим существующий
+                pickup_point = db.query(PickupPoint).filter(
+                    PickupPoint.address.ilike(pickup_point_address.strip())
+                ).first()
+                
+                if not pickup_point:
+                    pickup_point = PickupPoint(address=pickup_point_address.strip())
+                    db.add(pickup_point)
+                    db.commit()
+                    db.refresh(pickup_point)
+                
+                order_data['pickup_point_id'] = pickup_point.id
+            
             order = Order(**order_data)
             db.add(order)
             db.commit()
             db.refresh(order)
+            
+            # Загружаем связанные данные для возврата
+            order = db.query(Order)\
+                .options(
+                    joinedload(Order.user),
+                    joinedload(Order.pickup_point)
+                )\
+                .filter(Order.id == order.id)\
+                .first()
+            
             return order
         except Exception as e:
             db.rollback()
-            print(f"Ошибка при создании заказа: {e}")
+            print(f"❌ Ошибка при создании заказа: {e}")
+            import traceback
+            traceback.print_exc()
             return None
         finally:
             db.close()
     
     @staticmethod
     def update_order(order_id: int, order_data: dict):
-        """Обновление заказа"""
+        """Обновление заказа с обработкой адреса"""
         db: Session = next(get_db())
         try:
             order = db.query(Order).filter(Order.id == order_id).first()
-            if order:
-                for key, value in order_data.items():
-                    setattr(order, key, value)
-                db.commit()
-                db.refresh(order)
+            if not order:
+                return None
+            
+            # Обрабатываем адрес пункта выдачи
+            pickup_point_address = order_data.pop('pickup_point_address', None)
+            
+            if pickup_point_address:
+                # Находим или создаем пункт выдачи
+                pickup_point = db.query(PickupPoint).filter(
+                    PickupPoint.address.ilike(pickup_point_address.strip())
+                ).first()
+                
+                if not pickup_point:
+                    pickup_point = PickupPoint(address=pickup_point_address.strip())
+                    db.add(pickup_point)
+                    db.commit()
+                    db.refresh(pickup_point)
+                
+                order_data['pickup_point_id'] = pickup_point.id
+            
+            # Обновляем остальные поля
+            for key, value in order_data.items():
+                setattr(order, key, value)
+            
+            db.commit()
+            db.refresh(order)
+            
+            # Загружаем связанные данные для возврата
+            order = db.query(Order)\
+                .options(
+                    joinedload(Order.user),
+                    joinedload(Order.pickup_point)
+                )\
+                .filter(Order.id == order.id)\
+                .first()
+            
             return order
         except Exception as e:
             db.rollback()
-            print(f"Ошибка при обновлении заказа: {e}")
+            print(f"❌ Ошибка при обновлении заказа: {e}")
+            import traceback
+            traceback.print_exc()
             return None
         finally:
             db.close()
@@ -76,7 +158,19 @@ class OrderService:
             return False, "Заказ не найден"
         except Exception as e:
             db.rollback()
-            print(f"Ошибка при удалении заказа: {e}")
+            print(f"❌ Ошибка при удалении заказа: {e}")
+            import traceback
+            traceback.print_exc()
             return False, f"Ошибка при удалении: {e}"
+        finally:
+            db.close()
+    
+    @staticmethod
+    def get_all_pickup_points():
+        """Получение всех пунктов выдачи"""
+        db: Session = next(get_db())
+        try:
+            points = db.query(PickupPoint).order_by(PickupPoint.address).all()
+            return points
         finally:
             db.close()
