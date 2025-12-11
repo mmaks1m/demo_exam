@@ -6,7 +6,7 @@ import os
 
 class ProductCardWidget(QWidget):
     delete_requested = Signal(object)
-    edit_requested = Signal(object)
+    edit_requested = Signal(object)  # Добавлен сигнал для редактирования
     
     def __init__(self, product, user):
         super().__init__()
@@ -55,7 +55,7 @@ class ProductCardWidget(QWidget):
         if discount > 15:
             card_frame.setStyleSheet("""
                 QFrame {
-                    background-color: #7FFF00;
+                    background-color: #229c6d;
                     border: 1px solid white;
                     border-radius: 5px;
                     margin: 5px;
@@ -242,18 +242,18 @@ class ProductCardWidget(QWidget):
             delete_btn.setMinimumHeight(30)
             delete_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #00FA9A;
+                    background-color: #7FFF00;
                     color: black;
                     font-weight: bold;
-                    border: 2px solid #00FA9A;
+                    border: 2px solid #7FFF00;
                     border-radius: 4px;
                     padding: 5px;
                     font-family: "Times New Roman";
                     font-size: 12px;
                 }
                 QPushButton:hover {
-                    background-color: #06bf78;
-                    border-color: #06bf78;
+                    background-color: #00FA9A;
+                    border-color: #00FA9A;
                 }
                 QPushButton:pressed {
                     background-color: #06bf78;
@@ -304,7 +304,7 @@ class ProductCardWidget(QWidget):
                 QMessageBox.critical(self, "Ошибка", message)
     
     def mouseDoubleClickEvent(self, event):
-        """Обработчик двойного клика мыши"""
+        """Обработчик двойного клика мыши для редактирования"""
         if self.user and self.user.role.lower() == 'администратор':
             self.edit_requested.emit(self.product)
         event.accept()

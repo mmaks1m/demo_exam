@@ -136,8 +136,8 @@ class ProductListWindow(QWidget):
         self.sort_combo.addItems([
             "По названию (А-Я)",
             "По названию (Я-А)",
-            "По цене (возрастание)",
-            "По цене (убывание)",
+            "По цена (возрастание)",
+            "По цена (убывание)",
             "По количеству (возрастание)",
             "По количеству (убывание)"
         ])
@@ -373,12 +373,7 @@ class ProductListWindow(QWidget):
                 if self.user and self.user.role.lower() == 'администратор':
                     card.delete_requested.connect(self.on_product_deleted)
                     # Подключаем сигнал редактирования по двойному клику
-                    card.edit_requested.connect(self.edit_product)  # ← ДОБАВИТЬ ЭТУ СТРОКУ
-                
-                # УДАЛИТЬ СТАРУЮ РЕАЛИЗАЦИЮ (она конфликтует с новой):
-                # Двойной клик для редактирования
-                # if self.user and self.user.role.lower() == 'администратор':
-                #     card.mouseDoubleClickEvent = lambda event, p=product: self.edit_product(p)
+                    card.edit_requested.connect(self.edit_product)
                 
                 self.products_layout.addWidget(card)
             
@@ -405,7 +400,7 @@ class ProductListWindow(QWidget):
     def edit_product(self, product):
         """Редактирование товара (только администратор)"""
         user_role = self.user.role.lower() if self.user else None
-        if user_role.lower() == 'администратор':
+        if user_role == 'администратор':
             print(f"   ✏️ Редактирование товара: {product.name}")
             
             if self.current_edit_window is not None:

@@ -116,12 +116,12 @@ class MainWindow(QMainWindow):
             user_text = "Гость"
             role_text = ""
         
-        user_label = QLabel(f"👤 {user_text}{role_text}")
+        user_label = QLabel(f"{user_text}{role_text}")
         user_label.setFont(QFont("Times New Roman", 11, QFont.Bold))
         user_label.setStyleSheet("""
             QLabel {
                 color: #000000;
-                background-color: rgba(255, 255, 255, 0.7);
+                background-color: #7FFF00;
                 padding: 3px 10px;
                 border-radius: 3px;
                 margin-right: 5px;

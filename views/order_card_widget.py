@@ -1,4 +1,4 @@
-# views/order_card_widget.py - ИСПРАВЛЕННЫЙ
+# views/order_card_widget.py - ИСПРАВЛЕННЫЙ С ВСЕМИ ПРОБЛЕМАМИ
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel, 
                              QFrame, QPushButton, QMessageBox, QSizePolicy)
 from PySide6.QtCore import Qt, Signal
@@ -22,40 +22,38 @@ class OrderCardWidget(QWidget):
         card_frame = QFrame()
         card_frame.setFrameStyle(QFrame.Box)
         card_frame.setLineWidth(1)
-        card_frame.setFixedHeight(180)
+        card_frame.setFixedHeight(260)
         
         card_frame.setStyleSheet("""
             QFrame {
                 background-color: #FFFFFF;
-                border: 2px solid #7FFF00;
-                border-radius: 8px;
-                margin: 8px;
+                border: 1px solid #cccccc;
+                border-radius: 5px;
+                margin: 5px;
             }
         """)
         
         main_layout = QHBoxLayout(card_frame)
-        main_layout.setContentsMargins(15, 12, 15, 12)
+        main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(20)
         
-        # Левая часть (2/3 ширины) - информация о заказе
+        # Левая часть - информация о заказе
         left_frame = QFrame()
-        left_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        left_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         left_layout = QVBoxLayout(left_frame)
         left_layout.setSpacing(8)
         left_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Артикул заказа - БЕЗОПАСНАЯ ПРОВЕРКА
-        article = "Не указан"
-        if hasattr(self.order, 'order_article') and self.order.order_article:
-            article = self.order.order_article
-        elif hasattr(self.order, 'id'):
-            article = f"ORD-{self.order.id}"
+        # Артикул заказа - формируем из товаров в заказе
+        article = self.generate_order_article()
         
         article_label = QLabel(f"<b>Артикул заказа:</b> {article}")
-        article_label.setFont(QFont("Times New Roman", 12, QFont.Bold))
+        article_label.setFont(QFont("Times New Roman", 12))
         article_label.setStyleSheet("color: #000000;")
+        article_label.setWordWrap(True)
+        article_label.setMinimumHeight(25)
         
-        # Статус заказа (с подсветкой) - БЕЗОПАСНАЯ ПРОВЕРКА
+        # Статус заказа (с подсветкой)
         status = getattr(self.order, 'status', 'не указан')
         status_label = QLabel(f"<b>Статус заказа:</b> {status}")
         status_label.setFont(QFont("Times New Roman", 12))
@@ -63,15 +61,36 @@ class OrderCardWidget(QWidget):
         # Подсветка статуса цветом
         status_lower = str(status).lower()
         if status_lower in ['выполнен', 'доставлен']:
-            status_label.setStyleSheet("color: #28a745; font-weight: bold;")
+            status_label.setStyleSheet("""
+                color: #000000; 
+                font-weight: bold; 
+                background-color: #d4edda; 
+                padding: 3px 6px; 
+                border-radius: 3px;
+                min-height: 25px;
+            """)
         elif status_lower in ['отменен', 'отменён']:
-            status_label.setStyleSheet("color: #dc3545; font-weight: bold;")
+            status_label.setStyleSheet("""
+                color: #000000; 
+                font-weight: bold; 
+                background-color: #f8d7da; 
+                padding: 3px 6px; 
+                border-radius: 3px;
+                min-height: 25px;
+            """)
         elif status_lower in ['в обработке', 'обработка']:
-            status_label.setStyleSheet("color: #ffc107; font-weight: bold;")
+            status_label.setStyleSheet("""
+                color: #000000; 
+                font-weight: bold; 
+                background-color: #fff3cd; 
+                padding: 3px 6px; 
+                border-radius: 3px;
+                min-height: 25px;
+            """)
         else:
-            status_label.setStyleSheet("color: #000000;")
+            status_label.setStyleSheet("color: #000000; min-height: 25px;")
         
-        # Адрес пункта выдачи - БЕЗОПАСНАЯ ПРОВЕРКА
+        # Адрес пункта выдачи
         address = "Не указан"
         if hasattr(self.order, 'pickup_point') and self.order.pickup_point:
             address = self.order.pickup_point.address
@@ -80,8 +99,9 @@ class OrderCardWidget(QWidget):
         address_label.setFont(QFont("Times New Roman", 12))
         address_label.setStyleSheet("color: #000000;")
         address_label.setWordWrap(True)
+        address_label.setMinimumHeight(25)
         
-        # Дата заказа - БЕЗОПАСНАЯ ПРОВЕРКА
+        # Дата заказа
         date_str = "Не указана"
         if hasattr(self.order, 'order_date') and self.order.order_date:
             try:
@@ -91,7 +111,19 @@ class OrderCardWidget(QWidget):
         
         date_label = QLabel(f"<b>Дата заказа:</b> {date_str}")
         date_label.setFont(QFont("Times New Roman", 12))
-        date_label.setStyleSheet("color: #000000;")
+        date_label.setStyleSheet("color: #000000; min-height: 25px;")
+        
+        # Дата доставки - ДОБАВЛЯЕМ В ПРАВУЮ ЧАСТЬ
+        delivery_date_str = "Не указана"
+        if hasattr(self.order, 'delivery_date') and self.order.delivery_date:
+            try:
+                delivery_date_str = self.order.delivery_date.strftime("%d.%m.%Y %H:%M")
+            except:
+                delivery_date_str = "Ошибка формата"
+        
+        delivery_label = QLabel(f"<b>Дата доставки:</b> {delivery_date_str}")
+        delivery_label.setFont(QFont("Times New Roman", 12))
+        delivery_label.setStyleSheet("color: #000000; min-height: 25px;")
         
         # Пользователь (если есть права администратора/менеджера)
         if self.user and self.user.role.lower() in ['администратор', 'менеджер']:
@@ -101,7 +133,7 @@ class OrderCardWidget(QWidget):
             
             user_label = QLabel(f"<b>Пользователь:</b> {user_name}")
             user_label.setFont(QFont("Times New Roman", 12))
-            user_label.setStyleSheet("color: #666666;")
+            user_label.setStyleSheet("color: #000000; min-height: 25px;")
             left_layout.addWidget(user_label)
         
         left_layout.addWidget(article_label)
@@ -110,84 +142,93 @@ class OrderCardWidget(QWidget):
         left_layout.addWidget(date_label)
         left_layout.addStretch()
         
-        # Правая часть (1/3 ширины) - дата доставки и кнопки
+        # Правая часть - дата доставки и кнопки управления
         right_frame = QFrame()
-        right_frame.setFixedWidth(220)
+        right_frame.setFixedWidth(200)
         right_layout = QVBoxLayout(right_frame)
-        right_layout.setSpacing(15)
+        right_layout.setSpacing(10)
         right_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Дата доставки - БЕЗОПАСНАЯ ПРОВЕРКА
-        delivery_date_str = "Не указана"
-        if hasattr(self.order, 'delivery_date') and self.order.delivery_date:
-            try:
-                delivery_date_str = self.order.delivery_date.strftime("%d.%m.%Y")
-            except:
-                delivery_date_str = "Ошибка формата"
-        
-        delivery_label = QLabel(f"<div style='text-align: center; font-size: 16px; font-weight: bold;'>Дата доставки:</div>")
-        delivery_date = QLabel(f"<div style='text-align: center; font-size: 24px; font-weight: bold; color: #2E8B57;'>{delivery_date_str}</div>")
-        
-        delivery_label.setAlignment(Qt.AlignCenter)
-        delivery_date.setAlignment(Qt.AlignCenter)
+        # Дата доставки в правой части
+        right_layout.addWidget(delivery_label)
+        right_layout.addStretch()
         
         # Кнопки для администратора
         if self.user and self.user.role.lower() == 'администратор':
-            btn_layout = QVBoxLayout()
-            btn_layout.setSpacing(8)
-            
-            edit_btn = QPushButton("✏️ Редактировать")
-            edit_btn.setMinimumHeight(35)
+            edit_btn = QPushButton("Редактировать")
+            edit_btn.setMinimumHeight(40)
             edit_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #007bff;
-                    color: white;
+                    background-color: #7FFF00;
+                    color: black;
                     font-weight: bold;
-                    border: 2px solid #007bff;
+                    border: 2px solid #7FFF00;
                     border-radius: 4px;
                     font-family: "Times New Roman";
+                    font-size: 12px;
+                    padding: 8px 5px;
                 }
                 QPushButton:hover {
-                    background-color: #0056b3;
-                    border-color: #0056b3;
+                    background-color: #00FA9A;
+                    border-color: #00FA9A;
+                }
+                QPushButton:pressed {
+                    background-color: #06bf78;
+                    border-color: #06bf78;
                 }
             """)
             edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.order))
             
-            delete_btn = QPushButton("🗑️ Удалить")
-            delete_btn.setMinimumHeight(35)
+            delete_btn = QPushButton("Удалить")
+            delete_btn.setMinimumHeight(40)
             delete_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #dc3545;
-                    color: white;
+                    background-color: #7FFF00;
+                    color: black;
                     font-weight: bold;
-                    border: 2px solid #dc3545;
+                    border: 2px solid #7FFF00;
                     border-radius: 4px;
                     font-family: "Times New Roman";
+                    font-size: 12px;
+                    padding: 8px 5px;
                 }
                 QPushButton:hover {
-                    background-color: #c82333;
-                    border-color: #c82333;
+                    background-color: #00FA9A;
+                    border-color: #00FA9A;
+                }
+                QPushButton:pressed {
+                    background-color: #06bf78;
+                    border-color: #06bf78;
                 }
             """)
             delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.order))
             
-            btn_layout.addWidget(edit_btn)
-            btn_layout.addWidget(delete_btn)
-            btn_layout.addStretch()
-        
-        right_layout.addWidget(delivery_label)
-        right_layout.addWidget(delivery_date)
-        
-        if self.user and self.user.role.lower() == 'администратор':
-            right_layout.addLayout(btn_layout)
-        else:
+            right_layout.addWidget(edit_btn)
+            right_layout.addWidget(delete_btn)
             right_layout.addStretch()
         
         # Собираем карточку
-        main_layout.addWidget(left_frame, 2)  # 2/3 ширины
-        main_layout.addWidget(right_frame, 1)  # 1/3 ширины
+        main_layout.addWidget(left_frame, 3)  # 3/4 ширины
+        main_layout.addWidget(right_frame, 1)  # 1/4 ширины
         
         # Основной layout
         outer_layout = QVBoxLayout(self)
         outer_layout.addWidget(card_frame)
+    
+    def generate_order_article(self):
+        """Генерация артикула заказа на основе товаров в заказе"""
+        if not hasattr(self.order, 'order_items') or not self.order.order_items:
+            return "Без товаров"
+        
+        # Собираем артикулы товаров и их количество
+        article_parts = []
+        for item in self.order.order_items:
+            if hasattr(item, 'product') and item.product:
+                article = item.product.article or "БЕЗ_АРТИКУЛА"
+                quantity = item.quantity or 0
+                article_parts.append(f"{article}x{quantity}")
+        
+        if article_parts:
+            return "".join(article_parts)
+        else:
+            return "Без товаров"

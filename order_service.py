@@ -1,4 +1,4 @@
-# order_service.py - ИСПРАВЛЕНИЕ ДЛЯ ЗАГРУЗКИ ВСЕХ СВЯЗАННЫХ ДАННЫХ
+# order_service.py - ДОБАВЛЯЕМ МЕТОД ДЛЯ СОХРАНЕНИЯ ТОВАРОВ
 from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import Order, OrderItem, User, PickupPoint, Product
@@ -172,5 +172,41 @@ class OrderService:
         try:
             points = db.query(PickupPoint).order_by(PickupPoint.address).all()
             return points
+        finally:
+            db.close()
+    
+    @staticmethod
+    def add_order_items(order_id: int, items_data: list):
+        """Добавление товаров в заказ"""
+        db: Session = next(get_db())
+        try:
+            # Удаляем старые товары из заказа
+            db.query(OrderItem).filter(OrderItem.order_id == order_id).delete()
+            
+            # Добавляем новые товары
+            for item in items_data:
+                order_item = OrderItem(
+                    order_id=order_id,
+                    product_article=item['product_article'],
+                    quantity=item['quantity']
+                )
+                db.add(order_item)
+            
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            print(f"❌ Ошибка при добавлении товаров в заказ: {e}")
+            return False
+        finally:
+            db.close()
+    
+    @staticmethod
+    def get_order_items(order_id: int):
+        """Получение товаров в заказе"""
+        db: Session = next(get_db())
+        try:
+            items = db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
+            return items
         finally:
             db.close()

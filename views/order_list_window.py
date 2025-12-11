@@ -1,4 +1,4 @@
-# views/order_list_window.py - ПЕРЕДЕЛАННЫЙ С КАРТОЧКАМИ
+# views/order_list_window.py - ИСПРАВЛЕННЫЙ С ОБРАБОТКОЙ ОКОН
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QMessageBox, QFrame, QScrollArea)
 from PySide6.QtCore import Qt, Signal
@@ -32,8 +32,11 @@ class OrderListWindow(QWidget):
         title_label.setStyleSheet("""
             font-size: 18px; 
             font-weight: bold; 
-            color: #2E8B57;
+            color: #000000;
             margin: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #7FFF00;
         """)
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
@@ -70,7 +73,7 @@ class OrderListWindow(QWidget):
         panel.setStyleSheet("""
             QFrame {
                 background-color: #F8FFF8;
-                border: 2px solid #00FA9A;
+                border: 2px solid #7FFF00;
                 border-radius: 8px;
                 padding: 10px;
             }
@@ -78,22 +81,22 @@ class OrderListWindow(QWidget):
         
         layout = QHBoxLayout()
         
-        add_btn = QPushButton("➕ Добавить заказ")
+        add_btn = QPushButton("Добавить заказ")
         add_btn.setMinimumHeight(40)
         add_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2E8B57;
-                color: white;
+                background-color: #7FFF00;
+                color: #000000;
                 font-weight: bold;
                 padding: 8px 15px;
                 border-radius: 6px;
-                border: 2px solid #2E8B57;
+                border: 2px solid #7FFF00;
                 font-family: "Times New Roman";
                 font-size: 14px;
             }
             QPushButton:hover {
-                background-color: #3CB371;
-                border-color: #3CB371;
+                background-color: #00FA9A;
+                border-color: #00FA9A;
             }
         """)
         add_btn.clicked.connect(self.add_order)
@@ -126,7 +129,7 @@ class OrderListWindow(QWidget):
             no_orders_label.setStyleSheet("""
                 QLabel {
                     font-size: 18px; 
-                    color: #666666;
+                    color: #000000;
                     padding: 40px;
                     font-family: "Times New Roman";
                     font-weight: bold;
@@ -155,7 +158,7 @@ class OrderListWindow(QWidget):
             print("   🆕 Открываем окно добавления заказа")
             
             # Проверяем, нет ли уже открытого окна редактирования
-            if self.current_edit_window is not None:
+            if self.current_edit_window is not None and self.current_edit_window.isVisible():
                 QMessageBox.warning(self, "Предупреждение", 
                                   "Закройте окно редактирования перед созданием нового заказа.")
                 return
@@ -171,7 +174,7 @@ class OrderListWindow(QWidget):
             print(f"   ✏️ Редактирование заказа: {order.id}")
             
             # Проверяем, нет ли уже открытого окна редактирования
-            if self.current_edit_window is not None:
+            if self.current_edit_window is not None and self.current_edit_window.isVisible():
                 QMessageBox.warning(self, "Предупреждение", 
                                   "Закройте окно редактирования перед открытием нового.")
                 return
@@ -205,3 +208,5 @@ class OrderListWindow(QWidget):
         """Обновление списка после сохранения"""
         print("   🔄 Обновляем список заказов после сохранения")
         self.load_orders()
+        # Очищаем ссылку на окно редактирования
+        self.current_edit_window = None

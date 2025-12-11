@@ -1,4 +1,4 @@
-# views/product_edit_window.py
+# views/product_edit_window.py - ИСПРАВЛЯЕМ ЦВЕТ ТЕКСТА
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox,
                              QTextEdit, QPushButton, QFileDialog, QMessageBox,
@@ -33,7 +33,7 @@ class ProductEditWindow(QWidget):
         # Заголовок
         title = QLabel("Редактирование товара" if self.is_editing else "Добавление нового товара")
         title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px; color: #2E8B57;")
+        title.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px; color: #000000;")
         
         # Основная форма
         form_group = QGroupBox("Информация о товаре")
@@ -44,11 +44,13 @@ class ProductEditWindow(QWidget):
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
+                color: #000000;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px 0 5px;
+                color: #000000;
             }
         """)
         
@@ -61,38 +63,65 @@ class ProductEditWindow(QWidget):
         self.article_input = QLineEdit()
         if self.is_editing:
             self.article_input.setReadOnly(True)
-            self.article_input.setStyleSheet("background-color: #f0f0f0;")
+            self.article_input.setStyleSheet("background-color: #f0f0f0; color: #000000;")
+        else:
+            self.article_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.article_input, 0, 1)
         
         # Название
         form_layout.addWidget(QLabel("Название*:"), 1, 0)
         self.name_input = QLineEdit()
+        self.name_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.name_input, 1, 1)
         
-        # Категория
         # Категория (выпадающий список)
         form_layout.addWidget(QLabel("Категория*:"), 2, 0)
-        self.category_input = QComboBox()  # ← ИЗМЕНИТЕ на QComboBox
-        self.category_input.setEditable(True)  # Можно вводить новую категорию
+        self.category_input = QComboBox()
+        self.category_input.setEditable(True)
         self.category_input.addItems([
             "Кроссовки", "Туфли", "Ботинки", "Сапоги", "Тапочки", 
             "Сандалии", "Мокасины", "Босоножки", "Слипоны"
         ])
+        self.category_input.setStyleSheet("""
+            QComboBox {
+                color: #000000;
+                background-color: white;
+            }
+            QComboBox QAbstractItemView {
+                color: #000000;
+                background-color: white;
+                selection-background-color: #7FFF00;
+                selection-color: #000000;
+            }
+        """)
         form_layout.addWidget(self.category_input, 2, 1)
 
         # Производитель (выпадающий список)
         form_layout.addWidget(QLabel("Производитель*:"), 3, 0)
-        self.manufacturer_input = QComboBox()  # ← ИЗМЕНИТЕ на QComboBox
+        self.manufacturer_input = QComboBox()
         self.manufacturer_input.setEditable(True)
         self.manufacturer_input.addItems([
             "Nike", "Adidas", "Reebok", "Puma", "New Balance",
             "Geox", "Ecco", "Clarks", "Salomon", "Timberland"
         ])
+        self.manufacturer_input.setStyleSheet("""
+            QComboBox {
+                color: #000000;
+                background-color: white;
+            }
+            QComboBox QAbstractItemView {
+                color: #000000;
+                background-color: white;
+                selection-background-color: #7FFF00;
+                selection-color: #000000;
+            }
+        """)
         form_layout.addWidget(self.manufacturer_input, 3, 1)
         
         # Поставщик
         form_layout.addWidget(QLabel("Поставщик:"), 4, 0)
         self.supplier_input = QLineEdit()
+        self.supplier_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.supplier_input, 4, 1)
         
         # Цена
@@ -102,6 +131,7 @@ class ProductEditWindow(QWidget):
         self.price_input.setMinimum(0)
         self.price_input.setDecimals(2)
         self.price_input.setSuffix(" ₽")
+        self.price_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.price_input, 5, 1)
         
         # Количество
@@ -109,6 +139,7 @@ class ProductEditWindow(QWidget):
         self.quantity_input = QSpinBox()
         self.quantity_input.setMaximum(999999)
         self.quantity_input.setMinimum(0)
+        self.quantity_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.quantity_input, 6, 1)
         
         # Скидка
@@ -116,12 +147,14 @@ class ProductEditWindow(QWidget):
         self.discount_input = QSpinBox()
         self.discount_input.setMaximum(100)
         self.discount_input.setMinimum(0)
+        self.discount_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.discount_input, 7, 1)
         
         # Единица измерения
         form_layout.addWidget(QLabel("Единица измерения:"), 8, 0)
         self.unit_input = QLineEdit()
         self.unit_input.setText("шт.")
+        self.unit_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.unit_input, 8, 1)
         
         # Изображение
@@ -129,12 +162,12 @@ class ProductEditWindow(QWidget):
         image_layout = QHBoxLayout()
         self.image_label = QLabel()
         self.image_label.setFixedSize(150, 150)
-        self.image_label.setStyleSheet("border: 2px solid #cccccc; background-color: #f9f9f9;")
+        self.image_label.setStyleSheet("border: 2px solid #cccccc; background-color: #f9f9f9; color: #000000;")
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setText("Нет\nизображения")
         
         self.load_image_btn = QPushButton("Загрузить")
-        self.load_image_btn.setStyleSheet("background-color: #00FA9A; color: #000000;")
+        self.load_image_btn.setStyleSheet("background-color: #7FFF00; color: #000000;")
         self.load_image_btn.clicked.connect(self.load_image)
         
         image_layout.addWidget(self.image_label)
@@ -146,6 +179,7 @@ class ProductEditWindow(QWidget):
         form_layout.addWidget(QLabel("Описание:"), 10, 0)
         self.description_input = QTextEdit()
         self.description_input.setMaximumHeight(100)
+        self.description_input.setStyleSheet("color: #000000;")
         form_layout.addWidget(self.description_input, 10, 1)
         
         form_group.setLayout(form_layout)
@@ -157,27 +191,33 @@ class ProductEditWindow(QWidget):
         
         self.save_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2E8B57;
-                color: white;
+                background-color: #7FFF00;
+                color: #000000;
                 font-weight: bold;
                 padding: 10px 25px;
                 border-radius: 5px;
+                border: 2px solid #7FFF00;
+                font-family: "Times New Roman";
             }
             QPushButton:hover {
-                background-color: #3CB371;
+                background-color: #00FA9A;
+                border-color: #00FA9A;
             }
         """)
         
         self.cancel_btn.setStyleSheet("""
             QPushButton {
-                background-color: #6c757d;
-                color: white;
+                background-color: #7FFF00;
+                color: #000000;
                 font-weight: bold;
                 padding: 10px 25px;
                 border-radius: 5px;
+                border: 2px solid #7FFF00;
+                font-family: "Times New Roman";
             }
             QPushButton:hover {
-                background-color: #5a6268;
+                background-color: #00FA9A;
+                border-color: #00FA9A;
             }
         """)
         
@@ -198,8 +238,21 @@ class ProductEditWindow(QWidget):
         if self.is_editing and self.product:
             self.article_input.setText(self.product.article or "")
             self.name_input.setText(self.product.name or "")
-            self.category_input.setText(self.product.category or "")
-            self.manufacturer_input.setText(self.product.manufacturer or "")
+            # Используем setCurrentText для QComboBox
+            if self.product.category:
+                index = self.category_input.findText(self.product.category)
+                if index >= 0:
+                    self.category_input.setCurrentIndex(index)
+                else:
+                    self.category_input.setCurrentText(self.product.category)
+            
+            if self.product.manufacturer:
+                index = self.manufacturer_input.findText(self.product.manufacturer)
+                if index >= 0:
+                    self.manufacturer_input.setCurrentIndex(index)
+                else:
+                    self.manufacturer_input.setCurrentText(self.product.manufacturer)
+            
             self.supplier_input.setText(self.product.supplier or "")
             self.price_input.setValue(float(self.product.price) if self.product.price else 0)
             self.quantity_input.setValue(self.product.stock_quantity or 0)
@@ -246,8 +299,8 @@ class ProductEditWindow(QWidget):
         product_data = {
             'article': self.article_input.text().strip(),
             'name': self.name_input.text().strip(),
-            'category': self.category_input.text().strip(),
-            'manufacturer': self.manufacturer_input.text().strip(),
+            'category': self.category_input.currentText().strip(),
+            'manufacturer': self.manufacturer_input.currentText().strip(),
             'supplier': self.supplier_input.text().strip(),
             'price': self.price_input.value(),
             'stock_quantity': self.quantity_input.value(),
@@ -258,15 +311,12 @@ class ProductEditWindow(QWidget):
         
         # Обработка изображения
         if self.image_path:
-            # Копируем изображение в папку ресурсов
             import shutil
             try:
-                # Генерируем имя файла
                 if self.is_editing:
                     image_name = f"{self.product.article}.png"
                 else:
-                    # Для нового товара нужно сначала создать товар чтобы получить артикул
-                    image_name = "temp.png"
+                    image_name = f"{product_data['article']}.png"
                 
                 dest_path = f"resources/images/{image_name}"
                 shutil.copy2(self.image_path, dest_path)
