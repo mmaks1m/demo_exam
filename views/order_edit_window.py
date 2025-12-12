@@ -502,7 +502,6 @@ class OrderEditWindow(QWidget):
             self.update_products_table()
     
     def add_product_to_order(self):
-        """Добавление товара в заказ"""
         current_index = self.product_combo.currentIndex()
         if current_index < 0:
             QMessageBox.warning(self, "Ошибка", "Выберите товар")
@@ -511,25 +510,21 @@ class OrderEditWindow(QWidget):
         product_article = self.product_combo.currentData()
         quantity = self.quantity_spin.value()
         
-        # Проверяем, не добавлен ли уже этот товар
         for item in self.selected_products:
             if item['product'].article == product_article:
                 QMessageBox.warning(self, "Ошибка", "Этот товар уже добавлен в заказ")
                 return
         
-        # Получаем товар из базы
         product = ProductService.get_product_by_article(product_article)
         if not product:
             QMessageBox.warning(self, "Ошибка", "Товар не найден")
             return
         
-        # Добавляем товар
         self.selected_products.append({
             'product': product,
             'quantity': quantity
         })
         
-        # Обновляем таблицу и артикул
         self.update_products_table()
         self.update_order_article()
     

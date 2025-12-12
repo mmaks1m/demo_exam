@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
     
     def show_orders(self):
         if self.user and self.user.role.lower() in ['менеджер', 'администратор']:
-            print("🔄 Открываем заказы...")
+            print("Открываем заказы...")
             
             from views.order_list_window import OrderListWindow
             
@@ -174,4 +174,4 @@ class MainWindow(QMainWindow):
             
             self.setWindowTitle("Заказы - Магазин обуви")
         else:
-            print("⛔ Нет прав для просмотра заказов")
+            print("Нет прав для просмотра заказов")

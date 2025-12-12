@@ -62,7 +62,6 @@ class ProductCardWidget(QWidget):
                 }
             """)
             
-            # Устанавливаем белый цвет для всех label внутри карточки
             for label in card_frame.findChildren(QLabel):
                 label.setStyleSheet("""
                     QLabel {
@@ -74,7 +73,6 @@ class ProductCardWidget(QWidget):
                 """)
     
     def setup_image_section(self, main_layout):
-        """Левая часть: Изображение товара"""
         left_frame = QFrame()
         left_frame.setFixedSize(190, 190)
         left_layout = QVBoxLayout(left_frame)
@@ -90,7 +88,6 @@ class ProductCardWidget(QWidget):
         main_layout.addWidget(left_frame)
     
     def load_product_image(self, photo_label):
-        """Загрузка изображения товара"""
         images_dir = "resources/images"
         image_filename = self.product.image_path
         
@@ -108,7 +105,6 @@ class ProductCardWidget(QWidget):
         self.show_default_image(photo_label)
     
     def show_default_image(self, photo_label):
-        """Показать изображение-заглушку"""
         default_paths = [
             "resources/images/picture.png",
             "picture.png",
@@ -191,7 +187,6 @@ class ProductCardWidget(QWidget):
         unit_label.setMaximumHeight(32)
         unit_label.setStyleSheet("color: #000000; border: none; background-color: transparent;")
         
-        # Количество на складе - ГОЛУБОЙ если 0
         stock_quantity = self.product.stock_quantity or 0
         quantity_text = f"<b>Количество на складе:</b> {stock_quantity}"
         quantity_label = QLabel(quantity_text)
@@ -199,9 +194,8 @@ class ProductCardWidget(QWidget):
         quantity_label.setMinimumHeight(28)
         quantity_label.setMaximumHeight(32)
         
-        # Устанавливаем голубой цвет если количество 0
         if stock_quantity == 0:
-            quantity_label.setStyleSheet("color: #1E90FF; border: none; background-color: transparent;")  # DodgerBlue
+            quantity_label.setStyleSheet("color: #1E90FF; border: none; background-color: transparent;")  
         else:
             quantity_label.setStyleSheet("color: #000000; border: none; background-color: transparent;")
         

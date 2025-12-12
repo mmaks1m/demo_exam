@@ -20,24 +20,19 @@ class ProductService:
     
     @staticmethod
     def get_products_with_filters(search_text="", supplier_filter="", sort_by="name"):
-        """Получение товаров с фильтрацией и сортировкой - ИСПРАВЛЕННЫЙ ПОИСК (AND)"""
         db: Session = next(get_db())
         try:
             query = db.query(Product)
             
-            # Поиск по тексту (по всем текстовым полям)
             if search_text:
                 search_text = search_text.strip()
                 print(f"🔍 Поисковый запрос: '{search_text}'")
-                
-                # Разбиваем на слова
+    
                 words = [word.strip() for word in search_text.split() if word.strip()]
                 print(f"🔍 Слова для поиска: {words}")
                 
                 if words:
-                    # Для КАЖДОГО слова создаем условие поиска по всем полям
                     for word in words:
-                        # Товар должен содержать КАЖДОЕ слово (AND)
                         word_condition = or_(
                             Product.name.ilike(f"%{word}%"),
                             Product.description.ilike(f"%{word}%"),
@@ -46,7 +41,6 @@ class ProductService:
                             Product.supplier.ilike(f"%{word}%"),
                             Product.article.ilike(f"%{word}%")
                         )
-                        # Применяем AND между словами
                         query = query.filter(word_condition)
             
             # Фильтрация по поставщику
@@ -154,30 +148,29 @@ class ProductService:
     
     @staticmethod
     def delete_product(article: str):
-        """Удаление товара (только если не присутствует в заказе)"""
         db: Session = next(get_db())
         try:
             product = db.query(Product).filter(Product.article == article).first()
             if not product:
                 return False, "Товар не найден"
             
-            # Проверяем, можно ли удалить
             if not ProductService.can_delete_product(article):
                 return False, "Товар присутствует в заказе, удаление невозможно"
             
-            # Удаляем изображение товара, если оно есть
             if product.image_path and os.path.exists(f"resources/images/{product.image_path}"):
                 try:
                     os.remove(f"resources/images/{product.image_path}")
                 except Exception as e:
-                    print(f"⚠️ Не удалось удалить изображение: {e}")
+                    print(f"Не удалось удалить изображение: {e}")
             
             db.delete(product)
             db.commit()
             return True, "Товар успешно удален"
         except Exception as e:
             db.rollback()
-            print(f"❌ Ошибка при удалении товара: {e}")
+            print(f"Ошибка при удалении товара: {e}")
             return False, f"Ошибка при удалении: {e}"
         finally:
             db.close()
+            
+            

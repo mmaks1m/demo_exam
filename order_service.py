@@ -46,15 +46,12 @@ class OrderService:
     
     @staticmethod
     def create_order(order_data: dict):
-        """Создание нового заказа с обработкой адреса"""
         db: Session = next(get_db())
         try:
-            # Обрабатываем адрес пункта выдачи
             pickup_point_address = order_data.pop('pickup_point_address', None)
             pickup_point_id = order_data.get('pickup_point_id', None)
             
             if pickup_point_address and not pickup_point_id:
-                # Создаем новый пункт выдачи или находим существующий
                 pickup_point = db.query(PickupPoint).filter(
                     PickupPoint.address.ilike(pickup_point_address.strip())
                 ).first()
@@ -72,7 +69,6 @@ class OrderService:
             db.commit()
             db.refresh(order)
             
-            # Загружаем связанные данные для возврата
             order = db.query(Order)\
                 .options(
                     joinedload(Order.user),
