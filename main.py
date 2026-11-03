@@ -23,6 +23,25 @@ class ApplicationController:
         # Окна
         self.login_window = None
         self.main_window = None
+        self.check_database_connection()
+
+    def check_database_connection(self):
+        """Проверка доступности базы данных перед открытием окон (#4)"""
+        try:
+            from database import engine
+            with engine.connect() as conn:
+                pass
+        except Exception as err:
+            QMessageBox.critical(
+                None,
+                "Ошибка подключения к базе данных",
+                "Не удалось установить соединение с сервером PostgreSQL.\n\n"
+                "Пожалуйста, проверьте:\n"
+                "1. Запущена ли служба PostgreSQL на вашем компьютере;\n"
+                "2. Заполнены ли корректные параметры подключения в файле config.ini "
+                "(секция [database]: host, port, name, user, password).\n\n"
+                f"Техническая информация:\n{err}"
+            )
         
     def show_login(self):
         window = LoginWindow()
