@@ -199,7 +199,7 @@ class LoginWindow(QWidget):
             self.login_success.emit(user)
         else:
             print("❌ Неверный логин или пароль")
-            QMessageBox.critical(self, "Ошибка", "Неверный логин или пароль")
+            QMessageBox.critical(self, "Ошибка авторизации", "Неверный логин или пароль. Пожалуйста, проверьте введённые данные и повторите попытку.")
             self.password_input.clear()
             self.password_input.setFocus()
     
