@@ -12,7 +12,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.user = user
         
-        self.setWindowTitle("Магазин обуви")
+        self.setWindowTitle("ShoeShop - Система оформления заказов обуви")
         self.setGeometry(100, 50, 1200, 700)
         
         if os.path.exists("resources/images/icon.png"):
