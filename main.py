@@ -32,14 +32,18 @@ class ApplicationController:
             with engine.connect() as conn:
                 pass
         except Exception as err:
+            cfg_hint = ""
+            if not os.path.exists("config.ini"):
+                cfg_hint = "Файл config.ini не найден! Скопируйте config.ini.example в config.ini и настройте реквизиты доступа.\n\n"
             QMessageBox.critical(
                 None,
                 "Ошибка подключения к базе данных",
                 "Не удалось установить соединение с сервером PostgreSQL.\n\n"
+                f"{cfg_hint}"
                 "Пожалуйста, проверьте:\n"
                 "1. Запущена ли служба PostgreSQL на вашем компьютере;\n"
-                "2. Заполнены ли корректные параметры подключения в файле config.ini "
-                "(секция [database]: host, port, name, user, password).\n\n"
+                "2. Создан ли файл config.ini из шаблона config.ini.example;\n"
+                "3. Корректны ли реквизиты доступа в секции [database] файла config.ini (host, port, name, user, password).\n\n"
                 f"Техническая информация:\n{err}"
             )
         
