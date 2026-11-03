@@ -23,6 +23,29 @@ class ApplicationController:
         # Окна
         self.login_window = None
         self.main_window = None
+        self.check_database_connection()
+
+    def check_database_connection(self):
+        """Проверка доступности базы данных перед открытием окон (#4)"""
+        try:
+            from database import engine
+            with engine.connect() as conn:
+                pass
+        except Exception as err:
+            cfg_hint = ""
+            if not os.path.exists("config.ini"):
+                cfg_hint = "Файл config.ini не найден! Скопируйте config.ini.example в config.ini и настройте реквизиты доступа.\n\n"
+            QMessageBox.critical(
+                None,
+                "Ошибка подключения к базе данных",
+                "Не удалось установить соединение с сервером PostgreSQL.\n\n"
+                f"{cfg_hint}"
+                "Пожалуйста, проверьте:\n"
+                "1. Запущена ли служба PostgreSQL на вашем компьютере;\n"
+                "2. Создан ли файл config.ini из шаблона config.ini.example;\n"
+                "3. Корректны ли реквизиты доступа в секции [database] файла config.ini (host, port, name, user, password).\n\n"
+                f"Техническая информация:\n{err}"
+            )
         
     def show_login(self):
         window = LoginWindow()
