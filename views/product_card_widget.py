@@ -188,7 +188,8 @@ class ProductCardWidget(QWidget):
         unit_label.setStyleSheet("color: #000000; border: none; background-color: transparent;")
         
         stock_quantity = self.product.stock_quantity or 0
-        stock_status = "много" if stock_quantity > 5 else "мало"
+        MANY_THRESHOLD = 5
+        stock_status = "много" if stock_quantity > MANY_THRESHOLD else "мало"
         quantity_text = f"<b>Количество на складе:</b> {stock_quantity} ({stock_status})"
         quantity_label = QLabel(quantity_text)
         quantity_label.setFont(QFont("Times New Roman", 11))
